@@ -27,6 +27,60 @@ int getIntParam(Cell* const cell, const std::string& str) {
   return param->second.as_int();
 }
 
+std::map<string, CoreIR::Module*>
+buildModuleMap(RTLIL::Design * const design,
+               CoreIR::Context* const c,
+               Namespace* const g) {
+
+  map<string, CoreIR::Module*> modMap;
+  for (auto &it : design->modules_) {
+
+    if (design->selected_module(it.first)) {
+
+        
+      RTLIL::Module* rmod = it.second;
+
+      cout << "Ports" << endl;
+      for (auto& conn : rmod->ports) {
+        cout << id2cstr(conn) << endl;
+      }
+
+      cout << "# of Connections = " << rmod->connections().size() << endl;
+      for (auto& conn : rmod->connections()) {
+        RTLIL::SigSig s = conn;
+        auto lhs = s.first;
+        auto rhs = s.second;
+
+        cout << "\tLHS width = " << lhs.size() << endl;
+        cout << "\tRHS width = " << lhs.size() << endl;
+      }
+
+      vector<pair<string, Type*> > args;
+
+      cout << "Wires" << endl;
+      for (auto &wire_iter : rmod->wires_) {
+        RTLIL::Wire *wire = wire_iter.second;
+        cout << "\t" << id2cstr(wire->name) << ", port in = " << wire->port_input << ", port out = " << wire->port_output << ", width = " << wire->width << endl;
+
+        if (wire->port_output) {
+          args.push_back({id2cstr(wire->name), c->Array(wire->width, c->Bit())});
+        }
+
+        if (wire->port_input) {
+          args.push_back({id2cstr(wire->name), c->Array(wire->width, c->BitIn())});
+        }
+
+      }
+
+      modMap[id2cstr(it.first)] =
+        g->newModuleDecl(id2cstr(it.first), c->Record(args));
+
+    }
+  }
+
+  return modMap;
+}
+
 struct ToCoreIRPass : public Yosys::Pass {
 	ToCoreIRPass() : Pass("to_coreir") { }
 
@@ -37,51 +91,7 @@ struct ToCoreIRPass : public Yosys::Pass {
 
     // Find and create coreir stubs for all modules
     Namespace* g = c->getGlobal();
-    map<string, CoreIR::Module*> modMap;
-    for (auto &it : design->modules_) {
-
-      if (design->selected_module(it.first)) {
-
-        
-        RTLIL::Module* rmod = it.second;
-
-        cout << "Ports" << endl;
-        for (auto& conn : rmod->ports) {
-          cout << id2cstr(conn) << endl;
-        }
-
-        cout << "# of Connections = " << rmod->connections().size() << endl;
-        for (auto& conn : rmod->connections()) {
-          RTLIL::SigSig s = conn;
-          auto lhs = s.first;
-          auto rhs = s.second;
-
-          cout << "\tLHS width = " << lhs.size() << endl;
-          cout << "\tRHS width = " << lhs.size() << endl;
-        }
-
-        vector<pair<string, Type*> > args;
-
-        cout << "Wires" << endl;
-	for (auto &wire_iter : rmod->wires_) {
-          RTLIL::Wire *wire = wire_iter.second;
-          cout << "\t" << id2cstr(wire->name) << ", port in = " << wire->port_input << ", port out = " << wire->port_output << ", width = " << wire->width << endl;
-
-          if (wire->port_output) {
-            args.push_back({id2cstr(wire->name), c->Array(wire->width, c->Bit())});
-          }
-
-          if (wire->port_input) {
-            args.push_back({id2cstr(wire->name), c->Array(wire->width, c->BitIn())});
-          }
-
-        }
-
-        modMap[id2cstr(it.first)] =
-          g->newModuleDecl(id2cstr(it.first), c->Record(args));
-
-      }
-    }
+    map<string, CoreIR::Module*> modMap = buildModuleMap(design, c, g);
 
     // Now with all modules added create module definitions
     for (auto &it : design->modules_) {
