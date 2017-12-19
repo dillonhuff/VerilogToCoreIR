@@ -81,6 +81,64 @@ buildModuleMap(RTLIL::Design * const design,
   return modMap;
 }
 
+map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
+                                       CoreIR::Context* const c,
+                                       CoreIR::ModuleDef* const def) {
+
+  map<Cell*, Instance*> instMap;
+  for (auto& cell_iter : rmod->cells_) {
+    Cell* cell = cell_iter.second;
+
+    string cellTp = RTLIL::id2cstr(cell->type);
+    string cellName = RTLIL::id2cstr(cell->name);
+        
+    cout << cellName << endl;
+
+    log("Cell: %s : %s\n",
+        RTLIL::id2cstr(cell->name),
+        RTLIL::id2cstr(cell->type));
+
+    for (auto& param : cell->parameters) {
+      log("\tParam: %s = %s\n",
+          RTLIL::id2cstr(param.first),
+          param.second.as_string().c_str());
+    }
+
+    if (cellTp == "$add") {
+
+      int widthA = getIntParam(cell, "\\A_WIDTH");
+      int widthB = getIntParam(cell, "\\B_WIDTH");
+      int widthY = getIntParam(cell, "\\Y_WIDTH");
+
+      assert(widthA == widthB);
+      assert(widthB == widthY);
+
+
+      string instName = "";
+      for (uint i = 0; i < cellName.size(); i++) {
+        if (cellName[i] == '$') {
+          instName += "__DOLLAR__";
+        } else if (cellName[i] == ':') {
+          instName += "__COLON__";
+        } else if (cellName[i] == '.') {
+          instName += "__DOT__";
+        } else {
+          instName += cellName[i];
+        }
+
+      }
+      auto inst = def->addInstance(instName, "coreir.add", {{"width", CoreIR::Const::make(c, widthY)}});
+
+      instMap[cell] = inst;
+          
+    } else {
+      assert(false);
+    }
+  }
+
+  return instMap;
+}
+
 struct ToCoreIRPass : public Yosys::Pass {
 	ToCoreIRPass() : Pass("to_coreir") { }
 
@@ -109,55 +167,56 @@ struct ToCoreIRPass : public Yosys::Pass {
       RTLIL::Module* rmod = it.second;
       log("Cell list\n");
 
-      map<Cell*, Instance*> instMap;
+      map<Cell*, Instance*> instMap = buildInstanceMap(rmod, c, def);
+
       for (auto& cell_iter : rmod->cells_) {
         Cell* cell = cell_iter.second;
 
-        string cellTp = RTLIL::id2cstr(cell->type);
-        string cellName = RTLIL::id2cstr(cell->name);
+        // string cellTp = RTLIL::id2cstr(cell->type);
+        // string cellName = RTLIL::id2cstr(cell->name);
         
-        cout << cellName << endl;
+        // cout << cellName << endl;
 
-        log("Cell: %s : %s\n",
-            RTLIL::id2cstr(cell->name),
-            RTLIL::id2cstr(cell->type));
+        // log("Cell: %s : %s\n",
+        //     RTLIL::id2cstr(cell->name),
+        //     RTLIL::id2cstr(cell->type));
 
-        for (auto& param : cell->parameters) {
-          log("\tParam: %s = %s\n",
-              RTLIL::id2cstr(param.first),
-              param.second.as_string().c_str());
-        }
+        // for (auto& param : cell->parameters) {
+        //   log("\tParam: %s = %s\n",
+        //       RTLIL::id2cstr(param.first),
+        //       param.second.as_string().c_str());
+        // }
 
-        if (cellTp == "$add") {
+        // if (cellTp == "$add") {
 
-          int widthA = getIntParam(cell, "\\A_WIDTH");
-          int widthB = getIntParam(cell, "\\B_WIDTH");
-          int widthY = getIntParam(cell, "\\Y_WIDTH");
+        //   int widthA = getIntParam(cell, "\\A_WIDTH");
+        //   int widthB = getIntParam(cell, "\\B_WIDTH");
+        //   int widthY = getIntParam(cell, "\\Y_WIDTH");
 
-          assert(widthA == widthB);
-          assert(widthB == widthY);
+        //   assert(widthA == widthB);
+        //   assert(widthB == widthY);
 
 
-          string instName = "";
-          for (uint i = 0; i < cellName.size(); i++) {
-            if (cellName[i] == '$') {
-              instName += "__DOLLAR__";
-            } else if (cellName[i] == ':') {
-              instName += "__COLON__";
-            } else if (cellName[i] == '.') {
-              instName += "__DOT__";
-            } else {
-              instName += cellName[i];
-            }
+        //   string instName = "";
+        //   for (uint i = 0; i < cellName.size(); i++) {
+        //     if (cellName[i] == '$') {
+        //       instName += "__DOLLAR__";
+        //     } else if (cellName[i] == ':') {
+        //       instName += "__COLON__";
+        //     } else if (cellName[i] == '.') {
+        //       instName += "__DOT__";
+        //     } else {
+        //       instName += cellName[i];
+        //     }
 
-          }
-          auto inst = def->addInstance(instName, "coreir.add", {{"width", CoreIR::Const::make(c, widthY)}});
+        //   }
+        //   auto inst = def->addInstance(instName, "coreir.add", {{"width", CoreIR::Const::make(c, widthY)}});
 
-          instMap[cell] = inst;
+        //   instMap[cell] = inst;
           
-        } else {
-          assert(false);
-        }
+        // } else {
+        //   assert(false);
+        // }
 
 
         // Add connections to output ports
@@ -226,17 +285,63 @@ struct ToCoreIRPass : public Yosys::Pass {
               ", port_id = " << w->port_id << endl;
 
 
-          if (w->port_input) {
-            string connName = id2cstr(conn.first);
+          Select* from = nullptr;
+          Select* to = nullptr;
 
-            if (connName == "A") {
-              def->connect(self->sel(id2cstr(w->name)), inst->sel("in0"));
-            } else if (connName == "B") {
-              def->connect(self->sel(id2cstr(w->name)), inst->sel("in1"));
-            } else {
-              assert(false);
-            }
+          string connName = id2cstr(conn.first);
+          cout << "connName = " << connName << endl;
+          if ((connName != "A") && (connName != "B")) {
+            continue;
           }
+
+          if (connName == "A") {
+            to = inst->sel("in0");
+          } else if (connName == "B") {
+            to = inst->sel("in1");
+          } else {
+            assert(false);
+          }
+          
+          if (w->port_input || w->port_output) {
+            from = self->sel(id2cstr(w->name));
+
+            // 
+            // if (connName == "A") {
+            //   def->connect(self->sel(id2cstr(w->name)), inst->sel("in0"));
+            // } else if (connName == "B") {
+            //   def->connect(self->sel(id2cstr(w->name)), inst->sel("in1"));
+            // } else {
+            //   assert(false);
+            // }
+
+          } else {
+            string s = id2cstr(w->name);
+            cout << "s = " << s << endl;
+            string cellName = s.substr(0, s.find("_"));
+            string portName = s.substr(s.find("_") + 1, s.size());
+
+            auto targetCell = rmod->cells_[IdString(cellName)];
+
+            assert(targetCell != nullptr);
+
+            cout << "targetCell = " << id2cstr(targetCell->name) << endl;
+
+            auto targetInst = instMap[targetCell];
+
+            assert(targetInst != nullptr);
+
+            // TODO: Create select string from the yosys port name instead of
+            // "out"
+            from = targetInst->sel("out");
+
+            //def->connect(self->sel(id2cstr(inName)), targetInst->sel("out"));
+            //assert(false);
+          }
+
+          assert(from != nullptr);
+          assert(to != nullptr);
+
+          def->connect(from, to);
           
         }
 
