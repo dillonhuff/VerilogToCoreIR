@@ -44,6 +44,21 @@ Namespace* CoreIRLoadLibrary_rtlil(CoreIR::Context* const c) {
     });
 
   rtLib->newGeneratorDecl("logic_and", logic_andTP, logic_and_args);
+
+  Params logic_or_args = {{"width",c->Int()}};
+  TypeGen* logic_orTP = rtLib->newTypeGen(
+    "logic_or_type", //name for the typegen
+    logic_or_args,
+    [](Context* c, Values genargs) { //Function to compute type
+      uint width = genargs.at("width")->get<int>();
+
+      return c->Record({
+          {"in0", c->BitIn()->Arr(width)},
+            {"in1", c->BitIn()->Arr(width)},
+              {"out",c->Bit()}});
+    });
+
+  rtLib->newGeneratorDecl("logic_or", logic_orTP, logic_or_args);
   
   return rtLib;
 }
@@ -148,11 +163,11 @@ void print_cell_info(RTLIL::Cell* const cell) {
 
 bool isBinaryComparator(const std::string& cellTp) {
   return (cellTp == "$eq") || (cellTp == "$lt") || (cellTp == "$gt") ||
-    (cellTp == "$le") || (cellTp == "$ge") || (cellTp == "$ne") || (cellTp == "$logic_and");
+    (cellTp == "$le") || (cellTp == "$ge") || (cellTp == "$ne") || (cellTp == "$logic_and") || (cellTp == "$logic_or");
 }
 
 bool isArithBinop(const std::string& cellTp) {
-  return (cellTp == "$add") || (cellTp == "$sub");
+  return (cellTp == "$add") || (cellTp == "$sub") || (cellTp == "$shl");
 
 }
 
@@ -161,10 +176,18 @@ std::string coreirOpName(const std::string& cellTp) {
     return "rtlil.logic_and";
   }
 
+  if (cellTp == "$logic_or") {
+    return "rtlil.logic_or";
+  }
+  
   if (cellTp == "$eq") {
     return "coreir.eq";
   }
 
+  if (cellTp == "$shl") {
+    return "coreir.shl";
+  }
+  
   if (cellTp == "$ne") {
     return "coreir.neq";
   }
