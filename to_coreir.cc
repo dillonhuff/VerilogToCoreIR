@@ -25,6 +25,29 @@ void addExtend(CoreIR::Context* const c) {
   
 }
 
+Namespace* CoreIRLoadLibrary_rtlil(CoreIR::Context* const c) {
+  auto rtLib = c->newNamespace("rtlil");
+
+
+
+  Params logic_and_args = {{"width",c->Int()}};
+  TypeGen* logic_andTP = rtLib->newTypeGen(
+    "logic_and_type", //name for the typegen
+    logic_and_args,
+    [](Context* c, Values genargs) { //Function to compute type
+      uint width = genargs.at("width")->get<int>();
+
+      return c->Record({
+          {"in0", c->BitIn()->Arr(width)},
+            {"in1", c->BitIn()->Arr(width)},
+              {"out",c->Bit()}});
+    });
+
+  rtLib->newGeneratorDecl("logic_and", logic_andTP, logic_and_args);
+  
+  return rtLib;
+}
+
 int getIntParam(Cell* const cell, const std::string& str) {
   auto param = cell->parameters.find(str);
   assert(param != std::end(cell->parameters));
@@ -125,14 +148,27 @@ void print_cell_info(RTLIL::Cell* const cell) {
 
 bool isBinaryComparator(const std::string& cellTp) {
   return (cellTp == "$eq") || (cellTp == "$lt") || (cellTp == "$gt") ||
-    (cellTp == "$le") || (cellTp == "$ge");
+    (cellTp == "$le") || (cellTp == "$ge") || (cellTp == "$ne") || (cellTp == "$logic_and");
+}
+
+bool isArithBinop(const std::string& cellTp) {
+  return (cellTp == "$add") || (cellTp == "$sub");
+
 }
 
 std::string coreirOpName(const std::string& cellTp) {
+  if (cellTp == "$logic_and") {
+    return "rtlil.logic_and";
+  }
+
   if (cellTp == "$eq") {
     return "coreir.eq";
   }
 
+  if (cellTp == "$ne") {
+    return "coreir.neq";
+  }
+  
   if (cellTp == "$le") {
     return "coreir.ule";
   }
@@ -149,6 +185,14 @@ std::string coreirOpName(const std::string& cellTp) {
     return "coreir.ugt";
   }
 
+  if (cellTp == "$add") {
+    return "coreir.add";
+  }
+
+  if (cellTp == "$sub") {
+    return "coreir.sub";
+  }
+  
   assert(false);
 }
 
@@ -192,19 +236,19 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
         
     //cout << cellName << endl;
 
-    log("Cell: %s : %s\n",
-        RTLIL::id2cstr(cell->name),
-        RTLIL::id2cstr(cell->type));
+    // log("Cell: %s : %s\n",
+    //     RTLIL::id2cstr(cell->name),
+    //     RTLIL::id2cstr(cell->type));
 
-    for (auto& param : cell->parameters) {
-      log("\tParam: %s = %s\n",
-          RTLIL::id2cstr(param.first),
-          param.second.as_string().c_str());
-    }
+    // for (auto& param : cell->parameters) {
+    //   log("\tParam: %s = %s\n",
+    //       RTLIL::id2cstr(param.first),
+    //       param.second.as_string().c_str());
+    // }
 
     
 
-    if (cellTp == "$add") {
+    if (isArithBinop(cellTp)) {
 
       // Reintroduce when casting is available
       // cout << "Add cell = " << cellName << endl;
@@ -218,11 +262,12 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
 
       
       //assert(widthA == widthB);
-      assert(maxWidth == widthY);
+      assert(maxWidth <= widthY);
 
       string instName = coreirSafeName(cellName);
 
-      auto inst = def->addInstance(instName, "coreir.add", {{"width", CoreIR::Const::make(c, widthY)}});
+      string genName = coreirOpName(cellTp);
+      auto inst = def->addInstance(instName, genName, {{"width", CoreIR::Const::make(c, widthY)}});
 
       instMap[cell] = inst;
     } else if (cellTp == "$and") {
@@ -427,6 +472,9 @@ struct ToCoreIRPass : public Yosys::Pass {
 
     // Find and create coreir stubs for all modules
     Namespace* g = c->getGlobal();
+
+    CoreIRLoadLibrary_rtlil(c);
+
     map<string, CoreIR::Module*> modMap = buildModuleMap(design, c, g);
 
     // Now with all modules added create module definitions
