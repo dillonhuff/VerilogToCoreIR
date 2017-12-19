@@ -20,11 +20,34 @@ using namespace std;
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
+// Extending node used to extend
+void addExtend(CoreIR::Context* const c) {
+  
+}
+
 int getIntParam(Cell* const cell, const std::string& str) {
   auto param = cell->parameters.find(str);
   assert(param != std::end(cell->parameters));
 
   return param->second.as_int();
+}
+
+std::string coreirSafeName(const std::string cellName) {
+  string instName = "";
+  for (uint i = 0; i < cellName.size(); i++) {
+    if (cellName[i] == '$') {
+      instName += "__DOLLAR__";
+    } else if (cellName[i] == ':') {
+      instName += "__COLON__";
+    } else if (cellName[i] == '.') {
+      instName += "__DOT__";
+    } else {
+      instName += cellName[i];
+    }
+
+  }
+
+  return instName;
 }
 
 std::map<string, CoreIR::Module*>
@@ -81,8 +104,82 @@ buildModuleMap(RTLIL::Design * const design,
   return modMap;
 }
 
+void print_cell_info(RTLIL::Cell* const cell) {
+
+  string cellTp = RTLIL::id2cstr(cell->type);
+  string cellName = RTLIL::id2cstr(cell->name);
+        
+  cout << cellName << endl;
+
+  cout << "Cell: %s : %s\n" << 
+    RTLIL::id2cstr(cell->name) <<
+    RTLIL::id2cstr(cell->type) << endl;
+
+  for (auto& param : cell->parameters) {
+    cout << "\tParam: %s = %s\n" <<
+      RTLIL::id2cstr(param.first) << 
+      param.second.as_string().c_str() << endl;
+  }
+
+}
+
+bool isBinaryComparator(const std::string& cellTp) {
+  return (cellTp == "$eq") || (cellTp == "$lt") || (cellTp == "$gt") ||
+    (cellTp == "$le") || (cellTp == "$ge");
+}
+
+std::string coreirOpName(const std::string& cellTp) {
+  if (cellTp == "$eq") {
+    return "coreir.eq";
+  }
+
+  if (cellTp == "$le") {
+    return "coreir.ule";
+  }
+
+  if (cellTp == "$ge") {
+    return "coreir.uge";
+  }
+
+  if (cellTp == "$lt") {
+    return "coreir.ult";
+  }
+
+  if (cellTp == "$gt") {
+    return "coreir.ugt";
+  }
+
+  assert(false);
+}
+
+void addBinaryComparator(const std::string& cellTp,
+                         Cell* const cell,
+                         std::map<Cell*, CoreIR::Instance*>& instMap,
+                         CoreIR::ModuleDef* const def,
+                         CoreIR::Context* const c) {
+  // cout << "Add cell = " << cellName << endl;
+  // print_cell_info(cell);
+
+  string cellName = id2cstr(cell->name);
+  
+  int widthA = getIntParam(cell, "\\A_WIDTH");
+  int widthB = getIntParam(cell, "\\B_WIDTH");
+  int widthY = getIntParam(cell, "\\Y_WIDTH");
+
+  int maxWidth = max(widthA, widthB);
+
+  string instName = coreirSafeName(cellName);
+
+  // TODO: Check that the operation is not bitwise
+  
+  string coreName = coreirOpName(cellTp);
+  auto inst = def->addInstance(instName, coreName, {{"width", CoreIR::Const::make(c, maxWidth)}});
+
+  instMap[cell] = inst;
+}
+
 map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
-                                       std::map<string, CoreIR::Module*> modMap,
+                                       std::map<string, CoreIR::Module*>& modMap,
                                        CoreIR::Context* const c,
                                        CoreIR::ModuleDef* const def) {
 
@@ -93,7 +190,7 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
     string cellTp = RTLIL::id2cstr(cell->type);
     string cellName = RTLIL::id2cstr(cell->name);
         
-    cout << cellName << endl;
+    //cout << cellName << endl;
 
     log("Cell: %s : %s\n",
         RTLIL::id2cstr(cell->name),
@@ -105,92 +202,99 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
           param.second.as_string().c_str());
     }
 
+    
+
     if (cellTp == "$add") {
+
+      // Reintroduce when casting is available
+      // cout << "Add cell = " << cellName << endl;
+      // print_cell_info(cell);
 
       int widthA = getIntParam(cell, "\\A_WIDTH");
       int widthB = getIntParam(cell, "\\B_WIDTH");
       int widthY = getIntParam(cell, "\\Y_WIDTH");
 
-      assert(widthA == widthB);
-      assert(widthB == widthY);
+      int maxWidth = max(widthA, widthB);
 
+      
+      //assert(widthA == widthB);
+      assert(maxWidth == widthY);
 
-      string instName = "";
-      for (uint i = 0; i < cellName.size(); i++) {
-        if (cellName[i] == '$') {
-          instName += "__DOLLAR__";
-        } else if (cellName[i] == ':') {
-          instName += "__COLON__";
-        } else if (cellName[i] == '.') {
-          instName += "__DOT__";
-        } else {
-          instName += cellName[i];
-        }
+      string instName = coreirSafeName(cellName);
 
-      }
       auto inst = def->addInstance(instName, "coreir.add", {{"width", CoreIR::Const::make(c, widthY)}});
 
       instMap[cell] = inst;
-          
+    } else if (cellTp == "$and") {
+
+      int widthA = getIntParam(cell, "\\A_WIDTH");
+      int widthB = getIntParam(cell, "\\B_WIDTH");
+      int widthY = getIntParam(cell, "\\Y_WIDTH");
+
+      int maxWidth = max(widthA, widthB);
+
+      
+      //assert(widthA == widthB);
+      assert(maxWidth == widthY);
+
+      string instName = coreirSafeName(cellName);
+
+      Instance* inst = nullptr;
+      if (maxWidth > 1) {
+        inst = def->addInstance(instName, "coreir.and", {{"width", CoreIR::Const::make(c, widthY)}});
+      } else {
+        inst = def->addInstance(instName, "corebit.and");
+      }
+
+      assert(inst != nullptr);
+
+      instMap[cell] = inst;
+
+    } else if (isBinaryComparator(cellTp)) {
+
+      addBinaryComparator(cellTp, cell, instMap, def, c);
+      
+    } else if (cellTp == "$mux") {
+
+      // print_cell_info(cell);
+
+      string cellName = id2cstr(cell->name);
+  
+      int width = getIntParam(cell, "\\WIDTH");
+
+      string instName = coreirSafeName(cellName);
+
+      Instance* inst = nullptr;
+      if (width == 1) {
+        inst = def->addInstance(instName, "corebit.mux");
+      } else {
+        string coreName = "coreir.mux";
+        inst = def->addInstance(instName, coreName, {{"width", CoreIR::Const::make(c, width)}});
+      }
+
+      assert(inst != nullptr);
+
+      instMap[cell] = inst;
+      
     } else {
 
-      string instName = "";
-      for (uint i = 0; i < cellName.size(); i++) {
-        if (cellName[i] == '$') {
-          instName += "__DOLLAR__";
-        } else if (cellName[i] == ':') {
-          instName += "__COLON__";
-        } else if (cellName[i] == '.') {
-          instName += "__DOT__";
-        } else {
-          instName += cellName[i];
-        }
-
-      }
+      string instName = coreirSafeName(cellName);
 
       string cellTypeStr = id2cstr(cell->type);
       if (modMap.find(cellTypeStr) == end(modMap)) {
-        cout << "Unsupported Cell type = " << id2cstr(cell->name) << " : " << id2cstr(cell->type) << endl;
-        assert(false);
+        cout << "Unsupported Cell type = " << id2cstr(cell->name) << " : " << id2cstr(cell->type) << ", skipping." << endl;
+        //assert(false);
+      } else {
+        auto inst = def->addInstance(instName, modMap[cellTypeStr]);
+        instMap[cell] = inst;
       }
-
-      auto inst = def->addInstance(instName, modMap[cellTypeStr]);
-      instMap[cell] = inst;
     }
   }
 
   return instMap;
 }
 
-struct ToCoreIRPass : public Yosys::Pass {
-	ToCoreIRPass() : Pass("to_coreir") { }
-
-  virtual void execute(std::vector<std::string>, RTLIL::Design *design) {
-
-    Context* c = newContext();
-    log_header(design, "Executing TOCOREIR pass (find stub nets).\n");
-
-    // Find and create coreir stubs for all modules
-    Namespace* g = c->getGlobal();
-    map<string, CoreIR::Module*> modMap = buildModuleMap(design, c, g);
-
-    // Now with all modules added create module definitions
-    for (auto &it : design->modules_) {
-
-      CoreIR::Module* mod = modMap[id2cstr(it.first)];
-
-      SigMap assign_map(it.second);
-      
-      assert(mod != nullptr);
-
-      CoreIR::ModuleDef* def = mod->newModuleDef();
-
-      auto* self = def->sel("self");
-
-      RTLIL::Module* rmod = it.second;
-      log("Cell list\n");
-
-      map<Cell*, Instance*> instMap = buildInstanceMap(rmod, modMap, c, def);
+void addConnections() {
 
       // for (auto& cell_iter : rmod->cells_) {
       //   Cell* cell = cell_iter.second;
@@ -311,7 +415,37 @@ struct ToCoreIRPass : public Yosys::Pass {
       //   }
 
       // }
+}
+
+struct ToCoreIRPass : public Yosys::Pass {
+	ToCoreIRPass() : Pass("to_coreir") { }
+
+  virtual void execute(std::vector<std::string>, RTLIL::Design *design) {
+
+    Context* c = newContext();
+    log_header(design, "Executing TOCOREIR pass (find stub nets).\n");
+
+    // Find and create coreir stubs for all modules
+    Namespace* g = c->getGlobal();
+    map<string, CoreIR::Module*> modMap = buildModuleMap(design, c, g);
+
+    // Now with all modules added create module definitions
+    for (auto &it : design->modules_) {
+
+      CoreIR::Module* mod = modMap[id2cstr(it.first)];
+
+      SigMap assign_map(it.second);
       
+      assert(mod != nullptr);
+
+      CoreIR::ModuleDef* def = mod->newModuleDef();
+
+      auto* self = def->sel("self");
+
+      RTLIL::Module* rmod = it.second;
+      log("Cell list\n");
+
+      map<Cell*, Instance*> instMap = buildInstanceMap(rmod, modMap, c, def);
       mod->setDef(def);
     }
 
