@@ -40,7 +40,7 @@ buildModuleMap(RTLIL::Design * const design,
         
       RTLIL::Module* rmod = it.second;
 
-      cout << "Ports" << endl;
+      //cout << "Ports" << endl;
       for (auto& conn : rmod->ports) {
         cout << id2cstr(conn) << endl;
       }
@@ -51,16 +51,16 @@ buildModuleMap(RTLIL::Design * const design,
         auto lhs = s.first;
         auto rhs = s.second;
 
-        cout << "\tLHS width = " << lhs.size() << endl;
-        cout << "\tRHS width = " << lhs.size() << endl;
+        //cout << "\tLHS width = " << lhs.size() << endl;
+        //cout << "\tRHS width = " << lhs.size() << endl;
       }
 
       vector<pair<string, Type*> > args;
 
-      cout << "Wires" << endl;
+      //cout << "Wires" << endl;
       for (auto &wire_iter : rmod->wires_) {
         RTLIL::Wire *wire = wire_iter.second;
-        cout << "\t" << id2cstr(wire->name) << ", port in = " << wire->port_input << ", port out = " << wire->port_output << ", width = " << wire->width << endl;
+        //cout << "\t" << id2cstr(wire->name) << ", port in = " << wire->port_input << ", port out = " << wire->port_output << ", width = " << wire->width << endl;
 
         if (wire->port_output) {
           args.push_back({id2cstr(wire->name), c->Array(wire->width, c->Bit())});
@@ -132,6 +132,7 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
       instMap[cell] = inst;
           
     } else {
+      cout << "Unsupported Cell type = " << id2cstr(cell->name) << " : " << id2cstr(cell->type) << endl;
       assert(false);
     }
   }
@@ -171,53 +172,6 @@ struct ToCoreIRPass : public Yosys::Pass {
 
       for (auto& cell_iter : rmod->cells_) {
         Cell* cell = cell_iter.second;
-
-        // string cellTp = RTLIL::id2cstr(cell->type);
-        // string cellName = RTLIL::id2cstr(cell->name);
-        
-        // cout << cellName << endl;
-
-        // log("Cell: %s : %s\n",
-        //     RTLIL::id2cstr(cell->name),
-        //     RTLIL::id2cstr(cell->type));
-
-        // for (auto& param : cell->parameters) {
-        //   log("\tParam: %s = %s\n",
-        //       RTLIL::id2cstr(param.first),
-        //       param.second.as_string().c_str());
-        // }
-
-        // if (cellTp == "$add") {
-
-        //   int widthA = getIntParam(cell, "\\A_WIDTH");
-        //   int widthB = getIntParam(cell, "\\B_WIDTH");
-        //   int widthY = getIntParam(cell, "\\Y_WIDTH");
-
-        //   assert(widthA == widthB);
-        //   assert(widthB == widthY);
-
-
-        //   string instName = "";
-        //   for (uint i = 0; i < cellName.size(); i++) {
-        //     if (cellName[i] == '$') {
-        //       instName += "__DOLLAR__";
-        //     } else if (cellName[i] == ':') {
-        //       instName += "__COLON__";
-        //     } else if (cellName[i] == '.') {
-        //       instName += "__DOT__";
-        //     } else {
-        //       instName += cellName[i];
-        //     }
-
-        //   }
-        //   auto inst = def->addInstance(instName, "coreir.add", {{"width", CoreIR::Const::make(c, widthY)}});
-
-        //   instMap[cell] = inst;
-          
-        // } else {
-        //   assert(false);
-        // }
-
 
         // Add connections to output ports
         cout << "Adding output connections" << endl;
@@ -303,16 +257,8 @@ struct ToCoreIRPass : public Yosys::Pass {
           }
           
           if (w->port_input || w->port_output) {
-            from = self->sel(id2cstr(w->name));
 
-            // 
-            // if (connName == "A") {
-            //   def->connect(self->sel(id2cstr(w->name)), inst->sel("in0"));
-            // } else if (connName == "B") {
-            //   def->connect(self->sel(id2cstr(w->name)), inst->sel("in1"));
-            // } else {
-            //   assert(false);
-            // }
+            from = self->sel(id2cstr(w->name));
 
           } else {
             string s = id2cstr(w->name);
@@ -333,9 +279,6 @@ struct ToCoreIRPass : public Yosys::Pass {
             // TODO: Create select string from the yosys port name instead of
             // "out"
             from = targetInst->sel("out");
-
-            //def->connect(self->sel(id2cstr(inName)), targetInst->sel("out"));
-            //assert(false);
           }
 
           assert(from != nullptr);
