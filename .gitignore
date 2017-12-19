@@ -1,1 +1,11 @@
 *~
+*.d
+uut_sim.cpp
+uut_sim.h
+verilog_to_coreir.json
+bit_vector.h
+*.so
+*.o
+*.log
+to_coreir.so.dSYM/
+stubnets.so.dSYM/
