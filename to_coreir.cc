@@ -167,8 +167,7 @@ bool isBinaryComparator(const std::string& cellTp) {
 }
 
 bool isArithBinop(const std::string& cellTp) {
-  return (cellTp == "$add") || (cellTp == "$sub") || (cellTp == "$shl");
-
+  return (cellTp == "$add") || (cellTp == "$sub") || (cellTp == "$shl") || (cellTp == "$shr");
 }
 
 std::string coreirOpName(const std::string& cellTp) {
@@ -186,6 +185,10 @@ std::string coreirOpName(const std::string& cellTp) {
 
   if (cellTp == "$shl") {
     return "coreir.shl";
+  }
+
+  if (cellTp == "$shr") {
+    return "coreir.lshr";
   }
   
   if (cellTp == "$ne") {
@@ -274,7 +277,7 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
     if (isArithBinop(cellTp)) {
 
       // Reintroduce when casting is available
-      // cout << "Add cell = " << cellName << endl;
+      // cout << "Arith cell = " << cellName << endl;
       // print_cell_info(cell);
 
       int widthA = getIntParam(cell, "\\A_WIDTH");
@@ -285,7 +288,9 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
 
       
       //assert(widthA == widthB);
-      assert(maxWidth <= widthY);
+
+      // Even this is not necessarily true for shifts
+      //assert(maxWidth <= widthY);
 
       string instName = coreirSafeName(cellName);
 
@@ -312,6 +317,56 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
         inst = def->addInstance(instName, "coreir.and", {{"width", CoreIR::Const::make(c, widthY)}});
       } else {
         inst = def->addInstance(instName, "corebit.and");
+      }
+
+      assert(inst != nullptr);
+
+      instMap[cell] = inst;
+
+    } else if (cellTp == "$or") {
+      int widthA = getIntParam(cell, "\\A_WIDTH");
+      int widthB = getIntParam(cell, "\\B_WIDTH");
+      int widthY = getIntParam(cell, "\\Y_WIDTH");
+
+      int maxWidth = max(widthA, widthB);
+
+      //print_cell_info(cell);
+
+      
+      //assert(widthA == widthB);
+      assert(maxWidth == widthY);
+
+      string instName = coreirSafeName(cellName);
+
+      Instance* inst = nullptr;
+      if (maxWidth > 1) {
+        inst = def->addInstance(instName, "coreir.or", {{"width", CoreIR::Const::make(c, widthY)}});
+      } else {
+        inst = def->addInstance(instName, "corebit.or");
+      }
+
+      assert(inst != nullptr);
+
+      instMap[cell] = inst;
+      
+    } else if (cellTp == "$not") {
+
+      int widthA = getIntParam(cell, "\\A_WIDTH");
+      int widthY = getIntParam(cell, "\\Y_WIDTH");
+      int maxWidth = widthA;
+
+      //print_cell_info(cell);
+
+      //assert(widthA == widthB);
+      //assert(maxWidth == widthY);
+
+      string instName = coreirSafeName(cellName);
+
+      Instance* inst = nullptr;
+      if (maxWidth > 1) {
+        inst = def->addInstance(instName, "coreir.not", {{"width", CoreIR::Const::make(c, widthY)}});
+      } else {
+        inst = def->addInstance(instName, "corebit.not");
       }
 
       assert(inst != nullptr);
