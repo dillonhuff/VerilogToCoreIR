@@ -417,127 +417,166 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
   return instMap;
 }
 
-void addConnections() {
-
-      // for (auto& cell_iter : rmod->cells_) {
-      //   Cell* cell = cell_iter.second;
-
-      //   // Add connections to output ports
-      //   cout << "Adding output connections" << endl;
-      //   for (auto& conn : rmod->connections()) {
-      //     RTLIL::SigSpec fst = conn.first;
-      //     RTLIL::SigSpec snd = conn.second;
+void printSigSigInfo(RTLIL::SigSig conn) {
+      RTLIL::SigSpec fst = conn.first;
+      RTLIL::SigSpec snd = conn.second;
           
-      //     //cout << "\tSigSpec " << id2cstr(conn.first) << " size = " << ss.size() << ", is_wire = " << ss.is_wire() << endl;
+      cout << "\tSigSpec fst" << endl;
+      cout << "\t\tis wire  = " << fst.is_wire() << endl;
+      cout << "\t\tis chunk = " << fst.is_chunk() << endl;
 
-      //     assert(fst.is_wire());
-      //     assert(snd.is_wire());
+      cout << "\tSigSpec snd" << endl;
+      cout << "\t\tis wire  = " << snd.is_wire() << endl;
+      cout << "\t\tis chunk = " << snd.is_chunk() << endl;
+}
 
-      //     Wire* wIn = fst.as_wire();
+void addConnections(RTLIL::Module* const rmod,
+                    map<Cell*, Instance*>& instMap,
+                    CoreIR::ModuleDef* const def) {
 
-      //     cout << "\t\t Wire: " << id2cstr(wIn->name) << ", width = " <<
-      //       wIn->width << ", " << "start_offset = " << wIn->start_offset <<
-      //       ", port_id = " << wIn->port_id << endl;
+  auto* self = def->sel("self");
 
-      //     auto inName = wIn->name;
+  for (auto& cell_iter : rmod->cells_) {
+    Cell* cell = cell_iter.second;
 
-      //     Wire* w = snd.as_wire();
+    // Add connections to output ports
+    cout << "Adding output connections" << endl;
+    for (auto& conn : rmod->connections()) {
 
-      //     string s = id2cstr(w->name);
+      RTLIL::SigSpec fst = conn.first;
+      RTLIL::SigSpec snd = conn.second;
+      
+      assert(fst.is_wire());
+      assert(snd.is_wire());
 
-      //     string cellName = s.substr(0, s.find("_"));
-      //     string portName = s.substr(s.find("_") + 1, s.size());
+      Wire* wIn = fst.as_wire();
 
-      //     cout << "cellName = " << cellName << endl;
-      //     cout << "portName = " << portName << endl;
+      cout << "\t\t Wire: " << id2cstr(wIn->name) << ", width = " <<
+        wIn->width << ", " << "start_offset = " << wIn->start_offset <<
+        ", port_id = " << wIn->port_id << endl;
 
-      //     cout << "\t\t Wire: " << id2cstr(w->name) << ", width = " <<
-      //       w->width << ", " << "start_offset = " << w->start_offset <<
-      //       ", port_id = " << w->port_id << endl;
+      auto inName = wIn->name;
 
-      //     assert(portName == "Y");
+      Wire* w = snd.as_wire();
 
-      //     auto targetCell = rmod->cells_[IdString(cellName)];
+      string s = id2cstr(w->name);
 
-      //     assert(targetCell != nullptr);
+      reverse(begin(s), end(s));
+      string portName = s.substr(0, s.find("_"));
+      string cellName = s.substr(s.find("_") + 1, s.size());
 
-      //     auto targetInst = instMap[targetCell];
+      reverse(begin(cellName), end(cellName));
+      reverse(begin(portName), end(portName));
 
-      //     assert(targetInst != nullptr);
+      cout << "cellName = " << cellName << endl;
+      cout << "portName = " << portName << endl;
 
-      //     def->connect(self->sel(id2cstr(inName)), targetInst->sel("out"));
+      cout << "\t\t Wire: " << id2cstr(w->name) << ", width = " <<
+        w->width << ", " << "start_offset = " << w->start_offset <<
+        ", port_id = " << w->port_id << endl;
 
-      //   }
+      assert(portName == "Y");
+
+      auto targetCell = rmod->cells_[IdString(cellName)];
+
+      assert(targetCell != nullptr);
+
+      auto targetInst = instMap[targetCell];
+
+      assert(targetInst != nullptr);
+
+      def->connect(self->sel(id2cstr(inName)), targetInst->sel("out"));
+
+    }
         
-      //   // Add connections to instances
-      //   cout << "Connections" << endl;
+    // Add connections to instances
+    cout << "Connections" << endl;
 
-      //   auto* inst = instMap[cell];        
+    auto* inst = instMap[cell];        
 
-      //   for (auto& conn : cell->connections()) {
-
-      //     RTLIL::SigSpec ss = conn.second;
-      //     cout << "\tSigSpec " << id2cstr(conn.first) << " size = " << ss.size() << ", is_wire = " << ss.is_wire() << endl;
-
-      //     assert(ss.is_wire());
-
-      //     Wire* w = ss.as_wire();
-
-      //     cout << "\t\t Wire: " << id2cstr(w->name) << ", width = " <<
-      //         w->width << ", " << "start_offset = " << w->start_offset <<
-      //         ", port_id = " << w->port_id << endl;
+    for (auto conn : cell->connections()) {
 
 
-      //     Select* from = nullptr;
-      //     Select* to = nullptr;
+      RTLIL::SigSpec ss = conn.second;
+      
+      cout << "\tSigSpec " << id2cstr(conn.first) << " size = " << ss.size() << ", is_wire = " << ss.is_wire() << ", is chunk = " << ss.is_chunk() << endl;
 
-      //     string connName = id2cstr(conn.first);
-      //     cout << "connName = " << connName << endl;
-      //     if ((connName != "A") && (connName != "B")) {
-      //       continue;
-      //     }
+      if (ss.is_chunk() && !ss.is_wire()) {
+        for (auto& sigChunk : ss.chunks()) {
 
-      //     if (connName == "A") {
-      //       to = inst->sel("in0");
-      //     } else if (connName == "B") {
-      //       to = inst->sel("in1");
-      //     } else {
-      //       assert(false);
-      //     }
+          if (sigChunk.wire != nullptr) {
+            cout << "Wire = " << id2cstr(sigChunk.wire->name) << endl;
+          } else {
+            cout << "Wire is null" << endl;
+
+            for (auto& state : sigChunk.data) {
+              cout << "State = " << state << endl;
+            }
+          }
+        }
+        continue;
+        //assert(false);
+      }
+
+      assert(ss.is_wire());
+
+      Wire* w = ss.as_wire();
+
+      cout << "\t\t Wire: " << id2cstr(w->name) << ", width = " <<
+        w->width << ", " << "start_offset = " << w->start_offset <<
+        ", port_id = " << w->port_id << endl;
+
+
+      Select* from = nullptr;
+      Select* to = nullptr;
+
+      string connName = id2cstr(conn.first);
+      cout << "connName = " << connName << endl;
+      if ((connName != "A") && (connName != "B")) {
+        continue;
+      }
+
+      if (connName == "A") {
+        to = inst->sel("in0");
+      } else if (connName == "B") {
+        to = inst->sel("in1");
+      } else {
+        assert(false);
+      }
           
-      //     if (w->port_input || w->port_output) {
+      if (w->port_input || w->port_output) {
 
-      //       from = self->sel(id2cstr(w->name));
+        from = self->sel(id2cstr(w->name));
 
-      //     } else {
-      //       string s = id2cstr(w->name);
-      //       cout << "s = " << s << endl;
-      //       string cellName = s.substr(0, s.find("_"));
-      //       string portName = s.substr(s.find("_") + 1, s.size());
+      } else {
+        string s = id2cstr(w->name);
+        cout << "s = " << s << endl;
+        string cellName = s.substr(0, s.find("_"));
+        string portName = s.substr(s.find("_") + 1, s.size());
 
-      //       auto targetCell = rmod->cells_[IdString(cellName)];
+        auto targetCell = rmod->cells_[IdString(cellName)];
 
-      //       assert(targetCell != nullptr);
+        assert(targetCell != nullptr);
 
-      //       cout << "targetCell = " << id2cstr(targetCell->name) << endl;
+        cout << "targetCell = " << id2cstr(targetCell->name) << endl;
 
-      //       auto targetInst = instMap[targetCell];
+        auto targetInst = instMap[targetCell];
 
-      //       assert(targetInst != nullptr);
+        assert(targetInst != nullptr);
 
-      //       // TODO: Create select string from the yosys port name instead of
-      //       // "out"
-      //       from = targetInst->sel("out");
-      //     }
+        // TODO: Create select string from the yosys port name instead of
+        // "out"
+        from = targetInst->sel("out");
+      }
 
-      //     assert(from != nullptr);
-      //     assert(to != nullptr);
+      assert(from != nullptr);
+      assert(to != nullptr);
 
-      //     def->connect(from, to);
+      def->connect(from, to);
           
-      //   }
+    }
 
-      // }
+  }
 }
 
 struct ToCoreIRPass : public Yosys::Pass {
@@ -566,18 +605,17 @@ struct ToCoreIRPass : public Yosys::Pass {
 
       CoreIR::ModuleDef* def = mod->newModuleDef();
 
-      auto* self = def->sel("self");
-
       RTLIL::Module* rmod = it.second;
-      log("Cell list\n");
 
       map<Cell*, Instance*> instMap = buildInstanceMap(rmod, modMap, c, def);
+
+      cout << "Adding connections for module = " << mod->getName() << endl;
+
+      addConnections(rmod, instMap, def);
       mod->setDef(def);
     }
 
     assert(modMap.size() > 0);
-
-    
 
     CoreIR::Module* top = begin(modMap)->second;
     if (!saveToFile(g, "verilog_to_coreir.json", top)) {
