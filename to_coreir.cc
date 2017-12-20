@@ -809,6 +809,8 @@ buildSelectMap(RTLIL::Module* const rmod,
 
   // NOTE: This may not handle cross connections correctly, not sure how to
   // get those offsets
+
+  // NOTE: I also have not tested one to many connections
   cout << "All wires" << endl;
   for (auto wire : rmod->wires()) {
     cout << "\t" << id2cstr(wire->name) << endl;
