@@ -246,12 +246,12 @@ void print_cell_info(RTLIL::Cell* const cell) {
         
   cout << cellName << endl;
 
-  cout << "Cell: %s : %s\n" << 
+  cout << "Cell: " <<
     RTLIL::id2cstr(cell->name) <<
     RTLIL::id2cstr(cell->type) << endl;
 
   for (auto& param : cell->parameters) {
-    cout << "\tParam: %s = %s\n" <<
+    cout << "\tParam: " <<
       RTLIL::id2cstr(param.first) << 
       param.second.as_string().c_str() << endl;
   }
@@ -559,7 +559,6 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
         cout << "Unsupported Cell type = " << id2cstr(cell->name) << " : " << id2cstr(cell->type) << ", skipping." << endl;
 
         print_cell_info(cell);
-        //assert(false);
       } else {
         auto inst = def->addInstance(instName, modMap[cellTypeStr]);
         instMap[cell] = inst;
@@ -758,7 +757,11 @@ CoreIR::Select* instanceSelect(Cell* const cell,
 
   Instance* inst = instMap[cell];
 
-  assert(inst != nullptr);
+  if (inst == nullptr) {
+    cout << "Error: Instance map does not contain " << endl;
+    print_cell_info(cell);
+    assert(false);
+  }
 
   string coreIRPort = coreirPort(cell, portName);
 
