@@ -124,11 +124,20 @@ buildModuleMap(RTLIL::Design * const design,
         //cout << "\t" << id2cstr(wire->name) << ", port in = " << wire->port_input << ", port out = " << wire->port_output << ", width = " << wire->width << endl;
 
         if (wire->port_output) {
-          args.push_back({id2cstr(wire->name), c->Array(wire->width, c->Bit())});
+
+          if (wire->width > 1) {
+            args.push_back({id2cstr(wire->name), c->Array(wire->width, c->Bit())});
+          } else {
+            args.push_back({id2cstr(wire->name), c->Bit()});
+          }
         }
 
         if (wire->port_input) {
-          args.push_back({id2cstr(wire->name), c->Array(wire->width, c->BitIn())});
+          if (wire->width > 1) {
+            args.push_back({id2cstr(wire->name), c->Array(wire->width, c->BitIn())});
+          } else {
+            args.push_back({id2cstr(wire->name), c->BitIn()});
+          }
         }
 
       }
