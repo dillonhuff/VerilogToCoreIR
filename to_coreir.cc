@@ -20,17 +20,34 @@ using namespace std;
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
+void print_cell_info(RTLIL::Cell* const cell);
+
 // Extending node used to extend
 void addExtend(CoreIR::Context* const c) {
   
 }
 
+bool isRTLILBinop(const std::string& cellTp) {
+  if (cellTp[0] == '$') {
+    string opName = cellTp.substr(1, cellTp.size());
+    vector<string> rtlilBinops{"and", "or", "xor", "xnor", "shl", "shr", "sshl", "sshr", "logic_and", "logic_or", "eqx", "nex", "lt", "le", "eq", "ne", "ge", "gt", "add", "sub", "mul", "div", "mod", "pow"};
+
+    for (auto& e : rtlilBinops) {
+      if (e == opName) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
 Namespace* CoreIRLoadLibrary_rtlil(CoreIR::Context* const c) {
   auto rtLib = c->newNamespace("rtlil");
 
 
 
-  vector<string> rtlilBinops{};
+  vector<string> rtlilBinops{"and", "or", "xor", "xnor", "shl", "shr", "sshl", "sshr", "logic_and", "logic_or", "eqx", "nex", "lt", "le", "eq", "ne", "ge", "gt", "add", "sub", "mul", "div", "mod", "pow"};
+
   for (auto& name : rtlilBinops) {
     Params binopParams = {{"A_SIGNED", c->Bool()},
                           {"B_SIGNED", c->Bool()},
@@ -51,45 +68,75 @@ Namespace* CoreIRLoadLibrary_rtlil(CoreIR::Context* const c) {
                                 {"B", c->BitIn()->Arr(b_width)},
                                   {"Y",c->Bit()->Arr(y_width)}});
                         });
+
+    rtLib->newGeneratorDecl(name, logic_andTP, binopParams);
     
   }
 
-  Params logic_and_args = {{"width",c->Int()}};
-  TypeGen* logic_andTP = rtLib->newTypeGen(
-    "logic_and_type", //name for the typegen
-    logic_and_args,
-    [](Context* c, Values genargs) { //Function to compute type
-      uint width = genargs.at("width")->get<int>();
+  vector<string> rtlilUnops{"not", "pos", "neg", "reduce_and", "reduce_or", "reduce_xor", "reduce_xnor", "reduce_bool", "logic_not"};
 
-      return c->Record({
-          {"in0", c->BitIn()->Arr(width)},
-            {"in1", c->BitIn()->Arr(width)},
-              {"out",c->Bit()}});
-    });
+  for (auto& name : rtlilUnops) {
+    Params binopParams = {{"A_SIGNED", c->Bool()},
+                          {"A_WIDTH", c->Int()},
+                          {"Y_WIDTH", c->Int()}};
+    TypeGen* logic_andTP =
+      rtLib->newTypeGen(
+                        name,
+                        binopParams,
+                        [](Context* c, Values genargs) {
+                          uint a_width = genargs.at("A_WIDTH")->get<int>();
+                          uint y_width = genargs.at("Y_WIDTH")->get<int>();
 
-  rtLib->newGeneratorDecl("logic_and", logic_andTP, logic_and_args);
+                          return c->Record({
+                              {"A", c->BitIn()->Arr(a_width)},
+                                  {"Y",c->Bit()->Arr(y_width)}});
+                        });
 
-  Params logic_or_args = {{"width",c->Int()}};
-  TypeGen* logic_orTP = rtLib->newTypeGen(
-    "logic_or_type", //name for the typegen
-    logic_or_args,
-    [](Context* c, Values genargs) { //Function to compute type
-      uint width = genargs.at("width")->get<int>();
+    rtLib->newGeneratorDecl(name, logic_andTP, binopParams);
+    
+  }
+  
+  // Params logic_and_args = {{"width",c->Int()}};
+  // TypeGen* logic_andTP = rtLib->newTypeGen(
+  //   "logic_and_type", //name for the typegen
+  //   logic_and_args,
+  //   [](Context* c, Values genargs) { //Function to compute type
+  //     uint width = genargs.at("width")->get<int>();
 
-      return c->Record({
-          {"in0", c->BitIn()->Arr(width)},
-            {"in1", c->BitIn()->Arr(width)},
-              {"out",c->Bit()}});
-    });
+  //     return c->Record({
+  //         {"in0", c->BitIn()->Arr(width)},
+  //           {"in1", c->BitIn()->Arr(width)},
+  //             {"out",c->Bit()}});
+  //   });
 
-  rtLib->newGeneratorDecl("logic_or", logic_orTP, logic_or_args);
+  // rtLib->newGeneratorDecl("logic_and", logic_andTP, logic_and_args);
+
+  // Params logic_or_args = {{"width",c->Int()}};
+  // TypeGen* logic_orTP = rtLib->newTypeGen(
+  //   "logic_or_type", //name for the typegen
+  //   logic_or_args,
+  //   [](Context* c, Values genargs) { //Function to compute type
+  //     uint width = genargs.at("width")->get<int>();
+
+  //     return c->Record({
+  //         {"in0", c->BitIn()->Arr(width)},
+  //           {"in1", c->BitIn()->Arr(width)},
+  //             {"out",c->Bit()}});
+  //   });
+
+  // rtLib->newGeneratorDecl("logic_or", logic_orTP, logic_or_args);
   
   return rtLib;
 }
 
 int getIntParam(Cell* const cell, const std::string& str) {
   auto param = cell->parameters.find(str);
-  assert(param != std::end(cell->parameters));
+
+  if (param == std::end(cell->parameters)) {
+    cout << "Cannot find parameter " << str << " in " << endl;
+    print_cell_info(cell);
+    assert(false);
+  }
 
   return param->second.as_int();
 }
@@ -307,7 +354,28 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
 
     
 
-    if (isArithBinop(cellTp)) {
+    if (isRTLILBinop(cellTp)) {
+      string opName = cellTp.substr(1, cellTp.size());
+      cout << "opName = " << opName << endl;
+      string instName = coreirSafeName(cellName);
+
+      int widthA = getIntParam(cell, "\\A_WIDTH");
+      int widthB = getIntParam(cell, "\\B_WIDTH");
+      int widthY = getIntParam(cell, "\\Y_WIDTH");
+      int signedA = getIntParam(cell, "\\A_SIGNED");
+      int signedB = getIntParam(cell, "\\B_SIGNED");
+
+      auto inst = def->addInstance(instName, "rtlil." + opName,
+                                   {{"A_SIGNED", CoreIR::Const::make(c, (bool) signedA)},
+                                       {"B_SIGNED", CoreIR::Const::make(c, (bool) signedB)},
+                                         {"A_WIDTH", CoreIR::Const::make(c, widthA)},
+                                           {"B_WIDTH", CoreIR::Const::make(c, widthB)},
+                                             {"Y_WIDTH", CoreIR::Const::make(c, widthY)}});
+
+      instMap[cell] = inst;
+      
+      
+    } else if (isArithBinop(cellTp)) {
 
       // Reintroduce when casting is available
       // cout << "Arith cell = " << cellName << endl;
