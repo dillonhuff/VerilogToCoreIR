@@ -750,6 +750,7 @@ buildSelectMap(RTLIL::Module* const rmod,
     cout << "########## Module info for module: " << id2cstr(rmod->name) << endl;
 
   SigMap sigmap(rmod);
+
   dict<SigBit, Cell*> sigbit_to_driver_index;
   dict<SigBit, string> sigbit_to_driver_port_index;
   for (auto cell : rmod->cells()) {
@@ -761,6 +762,35 @@ buildSelectMap(RTLIL::Module* const rmod,
         }
       }
     }
+  }
+
+  for (auto& conn : rmod->connections()) {
+
+    //for (auto& port : rmod->ports) {
+    
+    //SigSpec portSig = rmod->getPort(port); //sigmap(conn.first);
+    //SigSpec resSig = sigmap(conn.second);
+
+    SigSpec portSig = conn.first;
+    SigSpec resSig = conn.second;
+
+    assert(portSig.is_wire());
+    assert(resSig.is_wire());
+
+    Wire* w = portSig.as_wire();
+    Wire* r = resSig.as_wire();
+    cout << "w = " << id2cstr(w->name) << endl;
+    cout << "r = " << id2cstr(w->name) << endl;
+
+    assert(w->port_input || w->port_output);
+
+    // if (w->port_input) {
+    //   for (auto bit : sigmap(conn.second)) {
+    //     sigbit_to_driver_port_index[bit] = id2cstr(w->name);
+    //   }
+    // }
+
+
   }
 
   dict<SigBit, Cell*> sigbit_to_receiver_index;
@@ -783,6 +813,15 @@ buildSelectMap(RTLIL::Module* const rmod,
   for (auto wire : rmod->wires()) {
     cout << "\t" << id2cstr(wire->name) << endl;
     int i = 0;
+
+    if (wire->port_output) {
+      cout << "### output = " << id2cstr(wire->name) << endl;
+    }
+
+    if (wire->port_input) {
+      cout << "### input = " << id2cstr(wire->name) << endl;
+    }
+
     for (auto& bit : sigmap(wire)) {
 
       // cout << "\t\tBit wire = " << id2cstr(bit.wire->name) << endl;
@@ -819,6 +858,9 @@ buildSelectMap(RTLIL::Module* const rmod,
           instanceSelect(receiverCell, receiverPort, bit.offset, instMap);
 
         def->connect(driverSel, receiverSel);
+      } else {
+        cout << "Wire = " << id2cstr(wire->name) << endl;
+        //assert(wire->port_input || wire->port_output);
       }
       
       i++;
