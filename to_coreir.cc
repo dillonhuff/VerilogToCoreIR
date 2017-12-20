@@ -408,6 +408,22 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
 
       instMap[cell] = inst;
       
+    } else if (cellTp == "$dff") {
+
+      string cellName = id2cstr(cell->name);
+  
+      int width = getIntParam(cell, "\\WIDTH");
+
+      string instName = coreirSafeName(cellName);
+
+      Instance* inst = nullptr;
+      string coreName = "coreir.reg";
+      inst = def->addInstance(instName, coreName, {{"width", CoreIR::Const::make(c, width)}});
+
+      assert(inst != nullptr);
+
+      instMap[cell] = inst;
+
     } else {
 
       string instName = coreirSafeName(cellName);
@@ -415,6 +431,8 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
       string cellTypeStr = id2cstr(cell->type);
       if (modMap.find(cellTypeStr) == end(modMap)) {
         cout << "Unsupported Cell type = " << id2cstr(cell->name) << " : " << id2cstr(cell->type) << ", skipping." << endl;
+
+        print_cell_info(cell);
         //assert(false);
       } else {
         auto inst = def->addInstance(instName, modMap[cellTypeStr]);
@@ -598,10 +616,89 @@ void addConnections(RTLIL::Module* const rmod,
   }
 }
 
+void printModuleInfo(RTLIL::Module* const rmod) {
+  cout << "########## Module info for module: " << id2cstr(rmod->name) << endl;
+
+  SigMap sigmap(rmod);
+  dict<SigBit, Cell*> sigbit_to_driver_index;
+  for (auto cell : rmod->cells()) {
+    for (auto conn : cell->connections()) {
+      if (cell->output(conn.first)) {
+        for (auto bit : sigmap(conn.second)) {
+          sigbit_to_driver_index[bit] = cell;
+        }
+      }
+    }
+  }
+
+  dict<SigBit, Cell*> sigbit_to_receiver_index;
+  for (auto cell : rmod->cells()) {
+    for (auto conn : cell->connections()) {
+      if (cell->input(conn.first)) {
+        for (auto bit : sigmap(conn.second)) {
+          sigbit_to_receiver_index[bit] = cell;
+        }
+      }
+    }
+  }
+  
+  cout << "All wires" << endl;
+  for (auto wire : rmod->wires()) {
+    cout << "\t" << id2cstr(wire->name) << endl;
+    int i = 0;
+    for (auto& bit : sigmap(wire)) {
+
+      cout << "\t\tDrivers" << endl;
+      Cell* driverCell = sigbit_to_driver_index[bit];
+
+      if (driverCell != nullptr) {
+        cout << "\t\t" << id2cstr(wire->name) << " " << i << " = " << id2cstr(sigbit_to_driver_index[bit]->name) << endl;
+      } else {
+        cout << "\t\t" << id2cstr(wire->name) << " " << i << " = NULL;" << endl;
+      }
+
+      cout << "\t\tReceivers" << endl;
+      Cell* receiverCell = sigbit_to_receiver_index[bit];
+
+      if (receiverCell != nullptr) {
+        cout << "\t\t" << id2cstr(wire->name) << " " << i << " = " << id2cstr(sigbit_to_receiver_index[bit]->name) << endl;
+      } else {
+        cout << "\t\t" << id2cstr(wire->name) << " " << i << " = NULL;" << endl;
+      }
+      
+      i++;
+    }
+  }
+
+  cout << "All connections" << endl;      
+
+  for (auto conn : rmod->connections()) {
+    SigSpec l = conn.first;
+    SigSpec r = conn.second;
+
+    cout << "\tSigSpec size = " << l.size() << ", is_wire = " << l.is_wire() << ", is chunk = " << l.is_chunk() << endl;
+        
+  }
+
+}
+
 struct ToCoreIRPass : public Yosys::Pass {
 	ToCoreIRPass() : Pass("to_coreir") { }
 
   virtual void execute(std::vector<std::string>, RTLIL::Design *design) {
+
+
+    
+    // Seems like wires are everything 
+
+
+    for (auto it : design->modules()) {
+
+      printModuleInfo(it);
+
+    }
+
+    assert(false);
 
     Context* c = newContext();
     log_header(design, "Executing TOCOREIR pass (find stub nets).\n");

@@ -1,5 +1,5 @@
 test: to_coreir.so
-	yosys -p "to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/single_wire/single_wire.v
+	#yosys -p "to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/single_wire/single_wire.v
 	yosys -p "proc; opt; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/register_assign/register_assign.v
 	#yosys -p "to_coreir" -ql test1.log -m ./to_coreir.so test.v
 	#yosys -p "to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/genesis_verif/*.v
