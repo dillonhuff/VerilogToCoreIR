@@ -559,9 +559,19 @@ void addConnections(RTLIL::Module* const rmod,
 
       } else {
         string s = id2cstr(w->name);
+
+
         cout << "s = " << s << endl;
-        string cellName = s.substr(0, s.find("_"));
-        string portName = s.substr(s.find("_") + 1, s.size());
+
+      reverse(begin(s), end(s));
+      string portName = s.substr(0, s.find("_"));
+      string cellName = s.substr(s.find("_") + 1, s.size());
+
+      reverse(begin(cellName), end(cellName));
+      reverse(begin(portName), end(portName));
+
+        // string cellName = s.substr(0, s.find("_"));
+        // string portName = s.substr(s.find("_") + 1, s.size());
 
         auto targetCell = rmod->cells_[IdString(cellName)];
 
