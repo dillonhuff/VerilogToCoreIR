@@ -652,18 +652,18 @@ void printModuleInfo(RTLIL::Module* const rmod) {
       Cell* driverCell = sigbit_to_driver_index[bit];
 
       if (driverCell != nullptr) {
-        cout << "\t\t" << id2cstr(wire->name) << " " << i << " = " << id2cstr(sigbit_to_driver_index[bit]->name) << endl;
+        cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = " << id2cstr(sigbit_to_driver_index[bit]->name) << endl;
       } else {
-        cout << "\t\t" << id2cstr(wire->name) << " " << i << " = NULL;" << endl;
+        cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = NULL;" << endl;
       }
 
       cout << "\t\tReceivers" << endl;
       Cell* receiverCell = sigbit_to_receiver_index[bit];
 
       if (receiverCell != nullptr) {
-        cout << "\t\t" << id2cstr(wire->name) << " " << i << " = " << id2cstr(sigbit_to_receiver_index[bit]->name) << endl;
+        cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = " << id2cstr(sigbit_to_receiver_index[bit]->name) << endl;
       } else {
-        cout << "\t\t" << id2cstr(wire->name) << " " << i << " = NULL;" << endl;
+        cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = NULL;" << endl;
       }
       
       i++;
