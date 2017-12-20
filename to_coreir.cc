@@ -106,7 +106,7 @@ Namespace* CoreIRLoadLibrary_rtlil(CoreIR::Context* const c) {
 
                           return c->Record({
                               {"A", c->BitIn()->Arr(a_width)},
-                                  {"Y",c->Bit()->Arr(y_width)}});
+                                {"Y",c->Bit()->Arr(y_width)}});
                         });
 
     rtLib->newGeneratorDecl(name, logic_andTP, binopParams);
@@ -115,67 +115,37 @@ Namespace* CoreIRLoadLibrary_rtlil(CoreIR::Context* const c) {
 
   Params muxParams = {{"WIDTH", c->Int()}};
   TypeGen* muxTP =
-      rtLib->newTypeGen(
-                        "rtMux",
-                        muxParams,
-                        [](Context* c, Values genargs) {
-                          uint width = genargs.at("WIDTH")->get<int>();
+    rtLib->newTypeGen(
+                      "rtMux",
+                      muxParams,
+                      [](Context* c, Values genargs) {
+                        uint width = genargs.at("WIDTH")->get<int>();
 
-                          return c->Record({
-                              {"A", c->BitIn()->Arr(width)},
-                                {"B", c->BitIn()->Arr(width)},
-                                  {"S", c->BitIn()},
-                                    {"Y",c->Bit()->Arr(width)}});
-                        });
+                        return c->Record({
+                            {"A", c->BitIn()->Arr(width)},
+                              {"B", c->BitIn()->Arr(width)},
+                                {"S", c->BitIn()},
+                                  {"Y",c->Bit()->Arr(width)}});
+                      });
 
-    rtLib->newGeneratorDecl("rtMux", muxTP, muxParams);
+  rtLib->newGeneratorDecl("rtMux", muxTP, muxParams);
 
-    Params dffParams = {{"WIDTH", c->Int()}, {"CLK_POLARITY", c->Bool()}};
-    TypeGen* dffTP =
-      rtLib->newTypeGen(
-                        "dff",
-                        dffParams,
-                        [](Context* c, Values genargs) {
-                          uint width = genargs.at("WIDTH")->get<int>();
+  Params dffParams = {{"WIDTH", c->Int()}, {"CLK_POLARITY", c->Bool()}};
+  TypeGen* dffTP =
+    rtLib->newTypeGen(
+                      "dff",
+                      dffParams,
+                      [](Context* c, Values genargs) {
+                        uint width = genargs.at("WIDTH")->get<int>();
 
-                          return c->Record({
-                              {"CLK", c->BitIn()},
-                                {"D", c->BitIn()->Arr(width)},
-                                  {"Q", c->Bit()->Arr(width)}});
-                        });
+                        return c->Record({
+                            {"CLK", c->BitIn()},
+                              {"D", c->BitIn()->Arr(width)},
+                                {"Q", c->Bit()->Arr(width)}});
+                      });
 
-    rtLib->newGeneratorDecl("dff", dffTP, dffParams);
+  rtLib->newGeneratorDecl("dff", dffTP, dffParams);
     
-  // Params logic_and_args = {{"width",c->Int()}};
-  // TypeGen* logic_andTP = rtLib->newTypeGen(
-  //   "logic_and_type", //name for the typegen
-  //   logic_and_args,
-  //   [](Context* c, Values genargs) { //Function to compute type
-  //     uint width = genargs.at("width")->get<int>();
-
-  //     return c->Record({
-  //         {"in0", c->BitIn()->Arr(width)},
-  //           {"in1", c->BitIn()->Arr(width)},
-  //             {"out",c->Bit()}});
-  //   });
-
-  // rtLib->newGeneratorDecl("logic_and", logic_andTP, logic_and_args);
-
-  // Params logic_or_args = {{"width",c->Int()}};
-  // TypeGen* logic_orTP = rtLib->newTypeGen(
-  //   "logic_or_type", //name for the typegen
-  //   logic_or_args,
-  //   [](Context* c, Values genargs) { //Function to compute type
-  //     uint width = genargs.at("width")->get<int>();
-
-  //     return c->Record({
-  //         {"in0", c->BitIn()->Arr(width)},
-  //           {"in1", c->BitIn()->Arr(width)},
-  //             {"out",c->Bit()}});
-  //   });
-
-  // rtLib->newGeneratorDecl("logic_or", logic_orTP, logic_or_args);
-  
   return rtLib;
 }
 
