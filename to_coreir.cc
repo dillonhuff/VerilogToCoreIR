@@ -41,6 +41,23 @@ bool isRTLILBinop(const std::string& cellTp) {
 
   return false;
 }
+
+bool isRTLILUnop(const std::string& cellTp) {
+  if (cellTp[0] == '$') {
+    string opName = cellTp.substr(1, cellTp.size());
+
+  vector<string> rtlilUnops{"not", "pos", "neg", "reduce_and", "reduce_or", "reduce_xor", "reduce_xnor", "reduce_bool", "logic_not"};
+
+    for (auto& e : rtlilUnops) {
+      if (e == opName) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 Namespace* CoreIRLoadLibrary_rtlil(CoreIR::Context* const c) {
   auto rtLib = c->newNamespace("rtlil");
 
@@ -375,148 +392,165 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
       instMap[cell] = inst;
       
       
-    } else if (isArithBinop(cellTp)) {
-
-      // Reintroduce when casting is available
-      // cout << "Arith cell = " << cellName << endl;
-      // print_cell_info(cell);
-
-      int widthA = getIntParam(cell, "\\A_WIDTH");
-      int widthB = getIntParam(cell, "\\B_WIDTH");
-      int widthY = getIntParam(cell, "\\Y_WIDTH");
-
-      int maxWidth = max(widthA, widthB);
-
-      
-      //assert(widthA == widthB);
-
-      // Even this is not necessarily true for shifts
-      //assert(maxWidth <= widthY);
-
+    } else if (isRTLILUnop(cellTp)) {
+      string opName = cellTp.substr(1, cellTp.size());
+      cout << "opName = " << opName << endl;
       string instName = coreirSafeName(cellName);
-
-      string genName = coreirOpName(cellTp);
-      auto inst = def->addInstance(instName, genName, {{"width", CoreIR::Const::make(c, widthY)}});
-
-      instMap[cell] = inst;
-    } else if (cellTp == "$and") {
-
-      int widthA = getIntParam(cell, "\\A_WIDTH");
-      int widthB = getIntParam(cell, "\\B_WIDTH");
-      int widthY = getIntParam(cell, "\\Y_WIDTH");
-
-      int maxWidth = max(widthA, widthB);
-
-      
-      //assert(widthA == widthB);
-      assert(maxWidth == widthY);
-
-      string instName = coreirSafeName(cellName);
-
-      Instance* inst = nullptr;
-      if (maxWidth > 1) {
-        inst = def->addInstance(instName, "coreir.and", {{"width", CoreIR::Const::make(c, widthY)}});
-      } else {
-        inst = def->addInstance(instName, "corebit.and");
-      }
-
-      assert(inst != nullptr);
-
-      instMap[cell] = inst;
-
-    } else if (cellTp == "$or") {
-      int widthA = getIntParam(cell, "\\A_WIDTH");
-      int widthB = getIntParam(cell, "\\B_WIDTH");
-      int widthY = getIntParam(cell, "\\Y_WIDTH");
-
-      int maxWidth = max(widthA, widthB);
-
-      //print_cell_info(cell);
-
-      
-      //assert(widthA == widthB);
-      assert(maxWidth == widthY);
-
-      string instName = coreirSafeName(cellName);
-
-      Instance* inst = nullptr;
-      if (maxWidth > 1) {
-        inst = def->addInstance(instName, "coreir.or", {{"width", CoreIR::Const::make(c, widthY)}});
-      } else {
-        inst = def->addInstance(instName, "corebit.or");
-      }
-
-      assert(inst != nullptr);
-
-      instMap[cell] = inst;
-      
-    } else if (cellTp == "$not") {
 
       int widthA = getIntParam(cell, "\\A_WIDTH");
       int widthY = getIntParam(cell, "\\Y_WIDTH");
-      int maxWidth = widthA;
+      int signedA = getIntParam(cell, "\\A_SIGNED");
 
-      //print_cell_info(cell);
-
-      //assert(widthA == widthB);
-      //assert(maxWidth == widthY);
-
-      string instName = coreirSafeName(cellName);
-
-      Instance* inst = nullptr;
-      if (maxWidth > 1) {
-        inst = def->addInstance(instName, "coreir.not", {{"width", CoreIR::Const::make(c, widthY)}});
-      } else {
-        inst = def->addInstance(instName, "corebit.not");
-      }
-
-      assert(inst != nullptr);
+      auto inst = def->addInstance(instName, "rtlil." + opName,
+                                   {{"A_SIGNED", CoreIR::Const::make(c, (bool) signedA)},
+                                         {"A_WIDTH", CoreIR::Const::make(c, widthA)},
+                                             {"Y_WIDTH", CoreIR::Const::make(c, widthY)}});
 
       instMap[cell] = inst;
-
-    } else if (isBinaryComparator(cellTp)) {
-
-      addBinaryComparator(cellTp, cell, instMap, def, c);
       
-    } else if (cellTp == "$mux") {
+    } // else if (isArithBinop(cellTp)) {
 
-      // print_cell_info(cell);
+    //   // Reintroduce when casting is available
+    //   // cout << "Arith cell = " << cellName << endl;
+    //   // print_cell_info(cell);
 
-      string cellName = id2cstr(cell->name);
+    //   int widthA = getIntParam(cell, "\\A_WIDTH");
+    //   int widthB = getIntParam(cell, "\\B_WIDTH");
+    //   int widthY = getIntParam(cell, "\\Y_WIDTH");
+
+    //   int maxWidth = max(widthA, widthB);
+
+      
+    //   //assert(widthA == widthB);
+
+    //   // Even this is not necessarily true for shifts
+    //   //assert(maxWidth <= widthY);
+
+    //   string instName = coreirSafeName(cellName);
+
+    //   string genName = coreirOpName(cellTp);
+    //   auto inst = def->addInstance(instName, genName, {{"width", CoreIR::Const::make(c, widthY)}});
+
+    //   instMap[cell] = inst;
+    // } else if (cellTp == "$and") {
+
+    //   int widthA = getIntParam(cell, "\\A_WIDTH");
+    //   int widthB = getIntParam(cell, "\\B_WIDTH");
+    //   int widthY = getIntParam(cell, "\\Y_WIDTH");
+
+    //   int maxWidth = max(widthA, widthB);
+
+      
+    //   //assert(widthA == widthB);
+    //   assert(maxWidth == widthY);
+
+    //   string instName = coreirSafeName(cellName);
+
+    //   Instance* inst = nullptr;
+    //   if (maxWidth > 1) {
+    //     inst = def->addInstance(instName, "coreir.and", {{"width", CoreIR::Const::make(c, widthY)}});
+    //   } else {
+    //     inst = def->addInstance(instName, "corebit.and");
+    //   }
+
+    //   assert(inst != nullptr);
+
+    //   instMap[cell] = inst;
+
+    // } else if (cellTp == "$or") {
+    //   int widthA = getIntParam(cell, "\\A_WIDTH");
+    //   int widthB = getIntParam(cell, "\\B_WIDTH");
+    //   int widthY = getIntParam(cell, "\\Y_WIDTH");
+
+    //   int maxWidth = max(widthA, widthB);
+
+    //   //print_cell_info(cell);
+
+      
+    //   //assert(widthA == widthB);
+    //   assert(maxWidth == widthY);
+
+    //   string instName = coreirSafeName(cellName);
+
+    //   Instance* inst = nullptr;
+    //   if (maxWidth > 1) {
+    //     inst = def->addInstance(instName, "coreir.or", {{"width", CoreIR::Const::make(c, widthY)}});
+    //   } else {
+    //     inst = def->addInstance(instName, "corebit.or");
+    //   }
+
+    //   assert(inst != nullptr);
+
+    //   instMap[cell] = inst;
+      
+    // } else if (cellTp == "$not") {
+
+    //   int widthA = getIntParam(cell, "\\A_WIDTH");
+    //   int widthY = getIntParam(cell, "\\Y_WIDTH");
+    //   int maxWidth = widthA;
+
+    //   //print_cell_info(cell);
+
+    //   //assert(widthA == widthB);
+    //   //assert(maxWidth == widthY);
+
+    //   string instName = coreirSafeName(cellName);
+
+    //   Instance* inst = nullptr;
+    //   if (maxWidth > 1) {
+    //     inst = def->addInstance(instName, "coreir.not", {{"width", CoreIR::Const::make(c, widthY)}});
+    //   } else {
+    //     inst = def->addInstance(instName, "corebit.not");
+    //   }
+
+    //   assert(inst != nullptr);
+
+    //   instMap[cell] = inst;
+
+    // } else if (isBinaryComparator(cellTp)) {
+
+    //   addBinaryComparator(cellTp, cell, instMap, def, c);
+      
+    // } else if (cellTp == "$mux") {
+
+    //   // print_cell_info(cell);
+
+    //   string cellName = id2cstr(cell->name);
   
-      int width = getIntParam(cell, "\\WIDTH");
+    //   int width = getIntParam(cell, "\\WIDTH");
 
-      string instName = coreirSafeName(cellName);
+    //   string instName = coreirSafeName(cellName);
 
-      Instance* inst = nullptr;
-      if (width == 1) {
-        inst = def->addInstance(instName, "corebit.mux");
-      } else {
-        string coreName = "coreir.mux";
-        inst = def->addInstance(instName, coreName, {{"width", CoreIR::Const::make(c, width)}});
-      }
+    //   Instance* inst = nullptr;
+    //   if (width == 1) {
+    //     inst = def->addInstance(instName, "corebit.mux");
+    //   } else {
+    //     string coreName = "coreir.mux";
+    //     inst = def->addInstance(instName, coreName, {{"width", CoreIR::Const::make(c, width)}});
+    //   }
 
-      assert(inst != nullptr);
+    //   assert(inst != nullptr);
 
-      instMap[cell] = inst;
+    //   instMap[cell] = inst;
       
-    } else if (cellTp == "$dff") {
+    // } else if (cellTp == "$dff") {
 
-      string cellName = id2cstr(cell->name);
+    //   string cellName = id2cstr(cell->name);
   
-      int width = getIntParam(cell, "\\WIDTH");
+    //   int width = getIntParam(cell, "\\WIDTH");
 
-      string instName = coreirSafeName(cellName);
+    //   string instName = coreirSafeName(cellName);
 
-      Instance* inst = nullptr;
-      string coreName = "coreir.reg";
-      inst = def->addInstance(instName, coreName, {{"width", CoreIR::Const::make(c, width)}});
+    //   Instance* inst = nullptr;
+    //   string coreName = "coreir.reg";
+    //   inst = def->addInstance(instName, coreName, {{"width", CoreIR::Const::make(c, width)}});
 
-      assert(inst != nullptr);
+    //   assert(inst != nullptr);
 
-      instMap[cell] = inst;
+    //   instMap[cell] = inst;
 
-    } else {
+    // } 
+    else {
 
       string instName = coreirSafeName(cellName);
 
