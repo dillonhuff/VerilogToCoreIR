@@ -112,6 +112,23 @@ Namespace* CoreIRLoadLibrary_rtlil(CoreIR::Context* const c) {
     rtLib->newGeneratorDecl(name, logic_andTP, binopParams);
     
   }
+
+  Params muxParams = {{"WIDTH", c->Int()}};
+  TypeGen* muxTP =
+      rtLib->newTypeGen(
+                        "rtMux",
+                        muxParams,
+                        [](Context* c, Values genargs) {
+                          uint width = genargs.at("WIDTH")->get<int>();
+
+                          return c->Record({
+                              {"A", c->BitIn()->Arr(width)},
+                                {"B", c->BitIn()->Arr(width)},
+                                  {"S", c->BitIn()},
+                                    {"Y",c->Bit()->Arr(width)}});
+                        });
+
+    rtLib->newGeneratorDecl("rtMux", muxTP, muxParams);
   
   // Params logic_and_args = {{"width",c->Int()}};
   // TypeGen* logic_andTP = rtLib->newTypeGen(
