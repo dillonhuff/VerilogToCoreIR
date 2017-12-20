@@ -30,6 +30,30 @@ Namespace* CoreIRLoadLibrary_rtlil(CoreIR::Context* const c) {
 
 
 
+  vector<string> rtlilBinops{};
+  for (auto& name : rtlilBinops) {
+    Params binopParams = {{"A_SIGNED", c->Bool()},
+                          {"B_SIGNED", c->Bool()},
+                          {"A_WIDTH", c->Int()},
+                          {"B_WIDTH", c->Int()},
+                          {"Y_WIDTH", c->Int()}};
+    TypeGen* logic_andTP =
+      rtLib->newTypeGen(
+                        name,
+                        binopParams,
+                        [](Context* c, Values genargs) {
+                          uint a_width = genargs.at("A_WIDTH")->get<int>();
+                          uint b_width = genargs.at("B_WIDTH")->get<int>();
+                          uint y_width = genargs.at("Y_WIDTH")->get<int>();
+
+                          return c->Record({
+                              {"A", c->BitIn()->Arr(a_width)},
+                                {"B", c->BitIn()->Arr(b_width)},
+                                  {"Y",c->Bit()->Arr(y_width)}});
+                        });
+    
+  }
+
   Params logic_and_args = {{"width",c->Int()}};
   TypeGen* logic_andTP = rtLib->newTypeGen(
     "logic_and_type", //name for the typegen
@@ -620,7 +644,6 @@ std::string coreirPort(Cell* const cell,
                        const std::string& portName) {
   string cellTp = id2cstr(cell->type);
 
-  
   return portName;
 }
 
