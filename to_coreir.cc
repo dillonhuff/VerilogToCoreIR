@@ -129,7 +129,23 @@ Namespace* CoreIRLoadLibrary_rtlil(CoreIR::Context* const c) {
                         });
 
     rtLib->newGeneratorDecl("rtMux", muxTP, muxParams);
-  
+
+    Params dffParams = {{"WIDTH", c->Int()}, {"CLK_POLARITY", c->Bool()}};
+    TypeGen* dffTP =
+      rtLib->newTypeGen(
+                        "dff",
+                        dffParams,
+                        [](Context* c, Values genargs) {
+                          uint width = genargs.at("WIDTH")->get<int>();
+
+                          return c->Record({
+                              {"CLK", c->BitIn()},
+                                {"D", c->BitIn()->Arr(width)},
+                                  {"Q", c->Bit()->Arr(width)}});
+                        });
+
+    rtLib->newGeneratorDecl("dff", dffTP, dffParams);
+    
   // Params logic_and_args = {{"width",c->Int()}};
   // TypeGen* logic_andTP = rtLib->newTypeGen(
   //   "logic_and_type", //name for the typegen
@@ -432,11 +448,27 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
 
       int width = getIntParam(cell, "\\WIDTH");
 
+      // Change to just mux?
       auto inst = def->addInstance(instName, "rtlil.rtMux",
                                    {{"WIDTH", CoreIR::Const::make(c, width)}});
 
       instMap[cell] = inst;
       
+    } else if (cellTp == "$dff") {
+
+      // string opName = cellTp.substr(1, cellTp.size());
+      // cout << "opName = " << opName << endl;
+      string instName = coreirSafeName(cellName);
+
+      int width = getIntParam(cell, "\\WIDTH");
+      int polarity = getIntParam(cell, "\\CLK_POLARITY");
+
+      auto inst = def->addInstance(instName, "rtlil.dff",
+                                   {{"WIDTH", CoreIR::Const::make(c, width)},
+                                       {"CLK_POLARITY", CoreIR::Const::make(c, (bool) polarity)}});
+
+      instMap[cell] = inst;
+
     } else {
 
       string instName = coreirSafeName(cellName);
@@ -446,6 +478,8 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
         cout << "Unsupported Cell type = " << id2cstr(cell->name) << " : " << id2cstr(cell->type) << ", skipping." << endl;
 
         print_cell_info(cell);
+
+        assert(false);
       } else {
         auto inst = def->addInstance(instName, modMap[cellTypeStr]);
         instMap[cell] = inst;
