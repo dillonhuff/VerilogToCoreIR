@@ -616,27 +616,66 @@ void addConnections(RTLIL::Module* const rmod,
   }
 }
 
+std::string coreirPort(Cell* const cell,
+                       const std::string& portName) {
+  string cellTp = id2cstr(cell->type);
+
+  
+  return portName;
+}
+
+CoreIR::Select* instanceSelect(Cell* const cell,
+                               const std::string& portName,
+                               const int wireOffset,
+                               map<Cell*, CoreIR::Instance*>& instMap) {
+
+  assert(cell != nullptr);
+
+  Instance* inst = instMap[cell];
+
+  assert(inst != nullptr);
+
+  string coreIRPort = coreirPort(cell, portName);
+
+  auto port = inst->sel(coreIRPort);
+
+  if ((port->getType()->getKind() == Type::TK_Bit) ||
+      (port->getType()->getKind() == Type::TK_BitIn)) {
+    assert(wireOffset == 0);
+
+    return port;
+  }
+
+  auto portBit = port->sel(wireOffset);
+
+  return portBit;
+}
+
 void printModuleInfo(RTLIL::Module* const rmod) {
   cout << "########## Module info for module: " << id2cstr(rmod->name) << endl;
 
   SigMap sigmap(rmod);
   dict<SigBit, Cell*> sigbit_to_driver_index;
+  dict<SigBit, string> sigbit_to_driver_port_index;
   for (auto cell : rmod->cells()) {
     for (auto conn : cell->connections()) {
       if (cell->output(conn.first)) {
         for (auto bit : sigmap(conn.second)) {
           sigbit_to_driver_index[bit] = cell;
+          sigbit_to_driver_port_index[bit] = id2cstr(conn.first);
         }
       }
     }
   }
 
   dict<SigBit, Cell*> sigbit_to_receiver_index;
+  dict<SigBit, string> sigbit_to_receiver_port_index;
   for (auto cell : rmod->cells()) {
     for (auto conn : cell->connections()) {
       if (cell->input(conn.first)) {
         for (auto bit : sigmap(conn.second)) {
           sigbit_to_receiver_index[bit] = cell;
+          sigbit_to_receiver_port_index[bit] = id2cstr(conn.first);
         }
       }
     }
@@ -648,11 +687,12 @@ void printModuleInfo(RTLIL::Module* const rmod) {
     int i = 0;
     for (auto& bit : sigmap(wire)) {
 
+      cout << "\t\tBit wire = " << id2cstr(bit.wire->name) << endl;
       cout << "\t\tDrivers" << endl;
       Cell* driverCell = sigbit_to_driver_index[bit];
 
       if (driverCell != nullptr) {
-        cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = " << id2cstr(sigbit_to_driver_index[bit]->name) << endl;
+        cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = " << id2cstr(sigbit_to_driver_index[bit]->name) << "." << sigbit_to_driver_port_index[bit] << endl;
       } else {
         cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = NULL;" << endl;
       }
@@ -661,7 +701,7 @@ void printModuleInfo(RTLIL::Module* const rmod) {
       Cell* receiverCell = sigbit_to_receiver_index[bit];
 
       if (receiverCell != nullptr) {
-        cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = " << id2cstr(sigbit_to_receiver_index[bit]->name) << endl;
+        cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = " << id2cstr(sigbit_to_receiver_index[bit]->name) << "." << sigbit_to_receiver_port_index[bit] << endl;
       } else {
         cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = NULL;" << endl;
       }
@@ -682,6 +722,93 @@ void printModuleInfo(RTLIL::Module* const rmod) {
 
 }
 
+void
+buildSelectMap(RTLIL::Module* const rmod,
+               map<Cell*, CoreIR::Instance*>& instMap,
+               CoreIR::Context* const c,
+               ModuleDef* const def) {
+
+    cout << "########## Module info for module: " << id2cstr(rmod->name) << endl;
+
+  SigMap sigmap(rmod);
+  dict<SigBit, Cell*> sigbit_to_driver_index;
+  dict<SigBit, string> sigbit_to_driver_port_index;
+  for (auto cell : rmod->cells()) {
+    for (auto conn : cell->connections()) {
+      if (cell->output(conn.first)) {
+        for (auto bit : sigmap(conn.second)) {
+          sigbit_to_driver_index[bit] = cell;
+          sigbit_to_driver_port_index[bit] = id2cstr(conn.first);
+        }
+      }
+    }
+  }
+
+  dict<SigBit, Cell*> sigbit_to_receiver_index;
+  dict<SigBit, string> sigbit_to_receiver_port_index;
+  for (auto cell : rmod->cells()) {
+    for (auto conn : cell->connections()) {
+      if (cell->input(conn.first)) {
+        for (auto bit : sigmap(conn.second)) {
+          sigbit_to_receiver_index[bit] = cell;
+          sigbit_to_receiver_port_index[bit] = id2cstr(conn.first);
+        }
+      }
+    }
+  }
+
+
+  // NOTE: This may not handle cross connections correctly, not sure how to
+  // get those offsets
+  cout << "All wires" << endl;
+  for (auto wire : rmod->wires()) {
+    cout << "\t" << id2cstr(wire->name) << endl;
+    int i = 0;
+    for (auto& bit : sigmap(wire)) {
+
+      // cout << "\t\tBit wire = " << id2cstr(bit.wire->name) << endl;
+      // cout << "\t\tDrivers" << endl;
+      Cell* driverCell = sigbit_to_driver_index[bit];
+
+      // if (driverCell != nullptr) {
+      //   cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = " << id2cstr(sigbit_to_driver_index[bit]->name) << "." << sigbit_to_driver_port_index[bit] << endl;
+      // } else {
+      //   cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = NULL;" << endl;
+      // }
+
+      //cout << "\t\tReceivers" << endl;
+      Cell* receiverCell = sigbit_to_receiver_index[bit];
+
+      // if (receiverCell != nullptr) {
+      //   cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = " << id2cstr(sigbit_to_receiver_index[bit]->name) << "." << sigbit_to_receiver_port_index[bit] << endl;
+      // } else {
+      //   cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = NULL;" << endl;
+      // }
+
+      if ((receiverCell != nullptr) &&
+          (driverCell != nullptr)) {
+
+        string driverPort = sigbit_to_driver_port_index[bit];
+        string receiverPort = sigbit_to_receiver_port_index[bit];
+
+        // NOTE: What should bit.offset be here?
+        auto driverSel =
+          instanceSelect(driverCell, driverPort, bit.offset, instMap);
+
+        // NOTE: What should bit.offset be here?
+        auto receiverSel =
+          instanceSelect(receiverCell, receiverPort, bit.offset, instMap);
+
+        def->connect(driverSel, receiverSel);
+      }
+      
+      i++;
+    }
+  }
+
+}
+
+
 struct ToCoreIRPass : public Yosys::Pass {
 	ToCoreIRPass() : Pass("to_coreir") { }
 
@@ -691,14 +818,14 @@ struct ToCoreIRPass : public Yosys::Pass {
     
     // Seems like wires are everything 
 
+    // for (auto it : design->modules()) {
 
-    for (auto it : design->modules()) {
+    //   printModuleInfo(it);
 
-      printModuleInfo(it);
+    // }
 
-    }
-
-    assert(false);
+    //return;
+    //assert(false);
 
     Context* c = newContext();
     log_header(design, "Executing TOCOREIR pass (find stub nets).\n");
@@ -725,9 +852,10 @@ struct ToCoreIRPass : public Yosys::Pass {
 
       map<Cell*, Instance*> instMap = buildInstanceMap(rmod, modMap, c, def);
 
-      cout << "Adding connections for module = " << mod->getName() << endl;
+      buildSelectMap(rmod, instMap, c, def);
+      //cout << "Adding connections for module = " << mod->getName() << endl;
 
-      addConnections(rmod, instMap, def);
+      //addConnections(rmod, instMap, def);
       mod->setDef(def);
     }
 
