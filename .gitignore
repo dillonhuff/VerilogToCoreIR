@@ -9,3 +9,4 @@ bit_vector.h
 *.log
 to_coreir.so.dSYM/
 stubnets.so.dSYM/
+*.json
