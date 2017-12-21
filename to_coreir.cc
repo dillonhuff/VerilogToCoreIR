@@ -8,6 +8,8 @@
 #include "kernel/yosys.h"
 #include "kernel/sigtools.h"
 
+#include "algorithm.h"
+
 #include "coreir.h"
 
 #include <string>
@@ -764,34 +766,22 @@ buildSelectMap(RTLIL::Module* const rmod,
     }
   }
 
-  for (auto& conn : rmod->connections()) {
+  // for (auto& conn : rmod->connections()) {
 
-    //for (auto& port : rmod->ports) {
-    
-    //SigSpec portSig = rmod->getPort(port); //sigmap(conn.first);
-    //SigSpec resSig = sigmap(conn.second);
+  //   SigSpec portSig = conn.first;
+  //   SigSpec resSig = conn.second;
 
-    SigSpec portSig = conn.first;
-    SigSpec resSig = conn.second;
+  //   assert(portSig.is_wire());
+  //   assert(resSig.is_wire());
 
-    assert(portSig.is_wire());
-    assert(resSig.is_wire());
+  //   Wire* w = portSig.as_wire();
+  //   Wire* r = resSig.as_wire();
+  //   cout << "w = " << id2cstr(w->name) << endl;
+  //   cout << "r = " << id2cstr(w->name) << endl;
 
-    Wire* w = portSig.as_wire();
-    Wire* r = resSig.as_wire();
-    cout << "w = " << id2cstr(w->name) << endl;
-    cout << "r = " << id2cstr(w->name) << endl;
+  //   assert(w->port_input || w->port_output);
 
-    assert(w->port_input || w->port_output);
-
-    // if (w->port_input) {
-    //   for (auto bit : sigmap(conn.second)) {
-    //     sigbit_to_driver_port_index[bit] = id2cstr(w->name);
-    //   }
-    // }
-
-
-  }
+  // }
 
   dict<SigBit, Cell*> sigbit_to_receiver_index;
   dict<SigBit, string> sigbit_to_receiver_port_index;
