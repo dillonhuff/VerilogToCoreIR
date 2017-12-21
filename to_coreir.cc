@@ -1085,7 +1085,6 @@ struct ToCoreIRPass : public Yosys::Pass {
     // }
 
     // return;
-    //assert(false);
 
     Context* c = newContext();
     log_header(design, "Executing TOCOREIR pass (find stub nets).\n");
