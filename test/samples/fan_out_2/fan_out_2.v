@@ -1,4 +1,4 @@
-module uut(in1, out1, out2);
+module fan_out_2(in1, out1, out2);
 
    input [1:0] in1;
    

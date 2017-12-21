@@ -641,6 +641,15 @@ std::string coreirPort(Cell* const cell,
   return portName;
 }
 
+bool isBitType(CoreIR::Type* const tp) {
+  if ((tp->getKind() == Type::TK_Bit) ||
+      (tp->getKind() == Type::TK_BitIn)) {
+    return true;
+  }
+
+  return false;
+}
+
 CoreIR::Select* instanceSelect(Cell* const cell,
                                const std::string& portName,
                                const int wireOffset,
@@ -701,6 +710,14 @@ void printModuleInfo(RTLIL::Module* const rmod) {
       }
     }
   }
+
+  cout << "----All cell connections" << endl;
+  for (auto cell : rmod->cells()) {
+    cout << "\tConnections for " << id2cstr(cell->name) << endl;
+    for (auto conn : cell->connections()) {
+      cout << "\t\t" << id2cstr(conn.first) << " --> " << id2cstr(conn.second.as_wire()->name) << endl;
+    }
+  }
   
   cout << "All wires" << endl;
   for (auto wire : rmod->wires()) {
@@ -731,13 +748,16 @@ void printModuleInfo(RTLIL::Module* const rmod) {
     }
   }
 
-  cout << "All connections" << endl;      
+  cout << "All wire <-> wire connections" << endl;      
 
   for (auto conn : rmod->connections()) {
     SigSpec l = conn.first;
     SigSpec r = conn.second;
 
-    cout << "\tSigSpec size = " << l.size() << ", is_wire = " << l.is_wire() << ", is chunk = " << l.is_chunk() << endl;
+    if (l.is_wire() && r.is_wire()) {
+      cout << "( " << id2cstr(l.as_wire()->name) << ", " << id2cstr(r.as_wire()->name) << " )" << endl;
+      //cout << "\tSigSpec size = " << l.size() << ", is_wire = " << l.is_wire() << ", is chunk = " << l.is_chunk() << endl;
+    }
         
   }
 
@@ -749,22 +769,77 @@ buildSelectMap(RTLIL::Module* const rmod,
                CoreIR::Context* const c,
                ModuleDef* const def) {
 
-    cout << "########## Module info for module: " << id2cstr(rmod->name) << endl;
+  cout << "########## Module info for module: " << id2cstr(rmod->name) << endl;
 
   SigMap sigmap(rmod);
 
+  // Build map from 
   dict<SigBit, Cell*> sigbit_to_driver_index;
   dict<SigBit, string> sigbit_to_driver_port_index;
   for (auto cell : rmod->cells()) {
     for (auto conn : cell->connections()) {
       if (cell->output(conn.first)) {
         for (auto bit : sigmap(conn.second)) {
+          //for (auto bit : conn.second) {
           sigbit_to_driver_index[bit] = cell;
           sigbit_to_driver_port_index[bit] = id2cstr(conn.first);
         }
       }
     }
   }
+
+  for (auto wire : rmod->wires()) {
+    if (wire->port_input) {
+      for (auto bit : sigmap(wire)) {
+        sigbit_to_driver_port_index[bit] = id2cstr(wire->name);
+      }
+    }
+  }
+
+  // Add connections from inputs to drivers
+  for (auto cell : rmod->cells()) {
+    for (auto conn : cell->connections()) {
+      if (cell->input(conn.first)) {
+        for (auto bit : sigmap(conn.second)) {
+          Cell* driver = sigbit_to_driver_index[bit];
+          string port = sigbit_to_driver_port_index[bit];
+
+          // From driver to the current bit
+          Select* to = instanceSelect(cell,
+                                      id2cstr(conn.first),
+                                      bit.offset,
+                                      instMap);
+
+          Select* from = nullptr;
+          if (driver != nullptr) {
+            from = instanceSelect(driver, port, bit.offset, instMap);
+          } else {
+
+            from = def->sel("self")->sel(port);
+            if (!isBitType(from->getType())) {
+              from = from->sel(bit.offset);
+            } else {
+              assert(bit.offset == 0);
+            }
+          }
+
+          assert(from != nullptr);
+
+          def->connect(from, to);
+        }
+      }
+    }
+  }
+
+  
+  for (auto wire : rmod->wires()) {
+    if (wire->port_output) {
+      for (auto bit : sigmap(wire)) {
+        
+      }
+    }
+  }
+  return;
 
   // for (auto& conn : rmod->connections()) {
 
@@ -909,7 +984,7 @@ struct ToCoreIRPass : public Yosys::Pass {
 
     // }
 
-    //return;
+    // return;
     //assert(false);
 
     Context* c = newContext();
@@ -947,7 +1022,9 @@ struct ToCoreIRPass : public Yosys::Pass {
     assert(modMap.size() > 0);
 
     CoreIR::Module* top = begin(modMap)->second;
-    if (!saveToFile(g, "verilog_to_coreir.json", top)) {
+    string fileName = top->getName() + ".json";
+    cout << "Saving to " << fileName << endl;
+    if (!saveToFile(g, fileName, top)) {
       cout << "Could not save to json!!" << endl;
       c->die();
     }
