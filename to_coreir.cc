@@ -671,7 +671,15 @@ CoreIR::Select* instanceSelect(Cell* const cell,
 
   if ((port->getType()->getKind() == Type::TK_Bit) ||
       (port->getType()->getKind() == Type::TK_BitIn)) {
-    assert(wireOffset == 0);
+    if (wireOffset != 0) {
+
+      cout << "Error: Trying to select bit " << wireOffset << " from single bit port: " << port->toString() << ", portName = " << portName << endl;
+      cout << "\tRTLIL Cell" << endl;
+      print_cell_info(cell);
+      cout << "\tRTLIL Port Name = " << portName << endl;
+      cout << "\tWire offset     = " << wireOffset << endl;
+      assert(false);
+    }
 
     return port;
   }
