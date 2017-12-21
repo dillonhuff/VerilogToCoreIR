@@ -831,14 +831,26 @@ buildSelectMap(RTLIL::Module* const rmod,
     }
   }
 
-  
   for (auto wire : rmod->wires()) {
     if (wire->port_output) {
       for (auto bit : sigmap(wire)) {
-        
+        Select* from = nullptr;
+
+        assert(from != nullptr);
+
+        // E.g. self->out0
+        Select* to = cast<Select>(def->sel(id2cstr(wire->name)));
+        if (!isBitType(to->getType())) {
+          to = to->sel(bit.offset);
+        } else {
+          assert(bit.offset == 0);
+        }
+
+        def->connect(from, to);
       }
     }
   }
+
   return;
 
   // for (auto& conn : rmod->connections()) {
