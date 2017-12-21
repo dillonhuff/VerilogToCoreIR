@@ -801,36 +801,45 @@ buildSelectMap(RTLIL::Module* const rmod,
   for (auto cell : rmod->cells()) {
     for (auto conn : cell->connections()) {
       if (cell->input(conn.first)) {
+
         for (auto bit : sigmap(conn.second)) {
-          Cell* driver = sigbit_to_driver_index[bit];
-          string port = sigbit_to_driver_port_index[bit];
-          cout << "offset = " << bit.offset << endl;
 
-          // From driver to the current bit
-          Select* to = instanceSelect(cell,
-                                      id2cstr(conn.first),
-                                      bit.offset,
-                                      instMap);
+          if (bit.wire != nullptr) {
+            cout << "Bit wire = " << id2cstr(bit.wire->name) << endl;
 
-          cout << "to = " << to->toString() << endl;
-          Select* from = nullptr;
-          if (driver != nullptr) {
-            from = instanceSelect(driver, port, bit.offset, instMap);
-          } else {
+            Cell* driver = sigbit_to_driver_index[bit];
+            string port = sigbit_to_driver_port_index[bit];
+            cout << "offset = " << bit.offset << endl;
 
-            from = def->sel("self")->sel(port);
-            if (!isBitType(from->getType())) {
-              from = from->sel(bit.offset);
+            // From driver to the current bit
+            Select* to = instanceSelect(cell,
+                                        id2cstr(conn.first),
+                                        bit.offset,
+                                        instMap);
+
+            cout << "to = " << to->toString() << endl;
+            Select* from = nullptr;
+            if (driver != nullptr) {
+              from = instanceSelect(driver, port, bit.offset, instMap);
             } else {
-              assert(bit.offset == 0);
+
+              from = def->sel("self")->sel(port);
+              if (!isBitType(from->getType())) {
+                from = from->sel(bit.offset);
+              } else {
+                assert(bit.offset == 0);
+              }
             }
+
+            assert(from != nullptr);
+
+            cout << "from = " << from->toString() << endl;
+
+            def->connect(from, to);
+          } else {
+            cout << "Wire is null, bit state = " << bit.data << endl;
+            assert(false);
           }
-
-          assert(from != nullptr);
-
-          cout << "from = " << from->toString() << endl;
-
-          def->connect(from, to);
         }
       }
     }
@@ -841,46 +850,53 @@ buildSelectMap(RTLIL::Module* const rmod,
     if (wire->port_output) {
       for (auto bit : sigmap(wire)) {
 
-        if (sigbit_to_driver_port_index.find(bit) !=
-            end(sigbit_to_driver_port_index)) {
+        if (bit.wire != nullptr) {
+          cout << "Bit wire = " << id2cstr(bit.wire->name) << endl;
+
+          if (sigbit_to_driver_port_index.find(bit) !=
+              end(sigbit_to_driver_port_index)) {
         
-          Cell* driver = sigbit_to_driver_index[bit];
-          string port = sigbit_to_driver_port_index[bit];
+            Cell* driver = sigbit_to_driver_index[bit];
+            string port = sigbit_to_driver_port_index[bit];
 
-          if (driver != nullptr) {
-            cout << "Driver cell = " << id2cstr(driver->name) << endl;
-          } else {
-            cout << "Driver is NULL" << endl;
-          }
-          cout << "Driver port = " << port << endl;
+            if (driver != nullptr) {
+              cout << "Driver cell = " << id2cstr(driver->name) << endl;
+            } else {
+              cout << "Driver is NULL" << endl;
+            }
+            cout << "Driver port = " << port << endl;
 
-          cout << "Wiring up " << id2cstr(wire->name) << endl;
-          Select* from = nullptr;
-          if (driver != nullptr) {
-            from = instanceSelect(driver, port, bit.offset, instMap);
-          } else {
+            cout << "Wiring up " << id2cstr(wire->name) << endl;
+            Select* from = nullptr;
+            if (driver != nullptr) {
+              from = instanceSelect(driver, port, bit.offset, instMap);
+            } else {
 
-            from = def->sel("self")->sel(port);
-            if (!isBitType(from->getType())) {
-              from = from->sel(bit.offset);
+              from = def->sel("self")->sel(port);
+              if (!isBitType(from->getType())) {
+                from = from->sel(bit.offset);
+              } else {
+                assert(bit.offset == 0);
+              }
+            }
+        
+            assert(from != nullptr);
+
+            // E.g. self->out0
+            Select* to = cast<Select>(def->sel("self")->sel(id2cstr(wire->name)));
+            if (!isBitType(to->getType())) {
+              to = to->sel(bit.offset);
             } else {
               assert(bit.offset == 0);
             }
-          }
-        
-          assert(from != nullptr);
 
-          // E.g. self->out0
-          Select* to = cast<Select>(def->sel("self")->sel(id2cstr(wire->name)));
-          if (!isBitType(to->getType())) {
-            to = to->sel(bit.offset);
+            def->connect(from, to);
           } else {
-            assert(bit.offset == 0);
+            cout << "ERROR: No port for " << id2cstr(wire->name) << endl;
           }
-
-          def->connect(from, to);
         } else {
-          cout << "ERROR: No port for " << id2cstr(wire->name) << endl;
+          cout << "Wire is null, data = " << bit.data << endl;
+          assert(false);
         }
       }
     }
