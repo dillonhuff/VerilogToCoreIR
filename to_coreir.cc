@@ -796,6 +796,7 @@ buildSelectMap(RTLIL::Module* const rmod,
     }
   }
 
+  cout << "Adding input to driver connections" << endl;
   // Add connections from inputs to drivers
   for (auto cell : rmod->cells()) {
     for (auto conn : cell->connections()) {
@@ -803,6 +804,7 @@ buildSelectMap(RTLIL::Module* const rmod,
         for (auto bit : sigmap(conn.second)) {
           Cell* driver = sigbit_to_driver_index[bit];
           string port = sigbit_to_driver_port_index[bit];
+          cout << "offset = " << bit.offset << endl;
 
           // From driver to the current bit
           Select* to = instanceSelect(cell,
@@ -810,6 +812,7 @@ buildSelectMap(RTLIL::Module* const rmod,
                                       bit.offset,
                                       instMap);
 
+          cout << "to = " << to->toString() << endl;
           Select* from = nullptr;
           if (driver != nullptr) {
             from = instanceSelect(driver, port, bit.offset, instMap);
@@ -825,12 +828,15 @@ buildSelectMap(RTLIL::Module* const rmod,
 
           assert(from != nullptr);
 
+          cout << "from = " << from->toString() << endl;
+
           def->connect(from, to);
         }
       }
     }
   }
 
+  cout << "Adding output connections to wires" << endl;
   for (auto wire : rmod->wires()) {
     if (wire->port_output) {
       for (auto bit : sigmap(wire)) {
