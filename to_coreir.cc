@@ -816,16 +816,23 @@ buildSelectMap(RTLIL::Module* const rmod,
         for (auto bit : sigmap(conn.second)) {
 
           if (bit.wire != nullptr) {
-            //cout << "Bit wire = " << id2cstr(bit.wire->name) << endl;
+            
 
             Cell* driver = sigbit_to_driver_index[bit];
+
+            if (sigbit_to_driver_port_index.find(bit) ==
+                end(sigbit_to_driver_port_index)) {
+              cout << "Bit " << bit.offset << " for wire " << id2cstr(bit.wire->name) << " has no port?" << endl;
+              assert(false);
+            }
+
             string port = sigbit_to_driver_port_index[bit];
             //cout << "offset = " << bit.offset << endl;
 
             // From driver to the current bit
             Select* to = instanceSelect(cell,
                                         id2cstr(conn.first),
-                                        bit.offset,
+                                        i, //bit.offset,
                                         instMap);
 
             //cout << "to = " << to->toString() << endl;
