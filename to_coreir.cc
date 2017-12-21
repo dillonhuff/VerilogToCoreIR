@@ -802,14 +802,17 @@ buildSelectMap(RTLIL::Module* const rmod,
     for (auto conn : cell->connections()) {
       if (cell->input(conn.first)) {
 
+        // Not sure if I really need this index variable or if the index is
+        // stored somewhere else
+        int i = 0;
         for (auto bit : sigmap(conn.second)) {
 
           if (bit.wire != nullptr) {
-            cout << "Bit wire = " << id2cstr(bit.wire->name) << endl;
+            //cout << "Bit wire = " << id2cstr(bit.wire->name) << endl;
 
             Cell* driver = sigbit_to_driver_index[bit];
             string port = sigbit_to_driver_port_index[bit];
-            cout << "offset = " << bit.offset << endl;
+            //cout << "offset = " << bit.offset << endl;
 
             // From driver to the current bit
             Select* to = instanceSelect(cell,
@@ -817,7 +820,7 @@ buildSelectMap(RTLIL::Module* const rmod,
                                         bit.offset,
                                         instMap);
 
-            cout << "to = " << to->toString() << endl;
+            //cout << "to = " << to->toString() << endl;
             Select* from = nullptr;
             if (driver != nullptr) {
               from = instanceSelect(driver, port, bit.offset, instMap);
@@ -833,13 +836,32 @@ buildSelectMap(RTLIL::Module* const rmod,
 
             assert(from != nullptr);
 
-            cout << "from = " << from->toString() << endl;
+            //cout << "from = " << from->toString() << endl;
 
             def->connect(from, to);
           } else {
-            cout << "Wire is null, bit state = " << bit.data << endl;
-            assert(false);
+            //cout << "Wire is null, bit state = " << bit.data << endl;
+
+            // Q: How do I know what offset the bit maps to in a wire if the bit
+            // offset field is not set? For now use index variable
+            
+            // From driver to the current bit
+            Select* to = instanceSelect(cell,
+                                        id2cstr(conn.first),
+                                        i,
+                                        instMap);
+
+            auto bitConst =
+              def->addInstance(to->toString() + "$bit_const_" + to_string(i),
+                               "corebit.const",
+                               {{"value", CoreIR::Const::make(c, bit.data == 1 ? true : false)}});;
+
+            Select* from = bitConst->sel("out");
+
+            def->connect(from, to);
+
           }
+          i++;
         }
       }
     }
