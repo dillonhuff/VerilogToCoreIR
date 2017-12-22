@@ -263,93 +263,6 @@ void print_cell_info(RTLIL::Cell* const cell) {
 
 }
 
-bool isBinaryComparator(const std::string& cellTp) {
-  return (cellTp == "$eq") || (cellTp == "$lt") || (cellTp == "$gt") ||
-    (cellTp == "$le") || (cellTp == "$ge") || (cellTp == "$ne") || (cellTp == "$logic_and") || (cellTp == "$logic_or");
-}
-
-bool isArithBinop(const std::string& cellTp) {
-  return (cellTp == "$add") || (cellTp == "$sub") || (cellTp == "$shl") || (cellTp == "$shr");
-}
-
-std::string coreirOpName(const std::string& cellTp) {
-  if (cellTp == "$logic_and") {
-    return "rtlil.logic_and";
-  }
-
-  if (cellTp == "$logic_or") {
-    return "rtlil.logic_or";
-  }
-  
-  if (cellTp == "$eq") {
-    return "coreir.eq";
-  }
-
-  if (cellTp == "$shl") {
-    return "coreir.shl";
-  }
-
-  if (cellTp == "$shr") {
-    return "coreir.lshr";
-  }
-  
-  if (cellTp == "$ne") {
-    return "coreir.neq";
-  }
-  
-  if (cellTp == "$le") {
-    return "coreir.ule";
-  }
-
-  if (cellTp == "$ge") {
-    return "coreir.uge";
-  }
-
-  if (cellTp == "$lt") {
-    return "coreir.ult";
-  }
-
-  if (cellTp == "$gt") {
-    return "coreir.ugt";
-  }
-
-  if (cellTp == "$add") {
-    return "coreir.add";
-  }
-
-  if (cellTp == "$sub") {
-    return "coreir.sub";
-  }
-  
-  assert(false);
-}
-
-// void addBinaryComparator(const std::string& cellTp,
-//                          Cell* const cell,
-//                          std::map<Cell*, CoreIR::Instance*>& instMap,
-//                          CoreIR::ModuleDef* const def,
-//                          CoreIR::Context* const c) {
-//   // cout << "Add cell = " << cellName << endl;
-//   // print_cell_info(cell);
-
-//   string cellName = id2cstr(cell->name);
-  
-//   int widthA = getIntParam(cell, "\\A_WIDTH");
-//   int widthB = getIntParam(cell, "\\B_WIDTH");
-//   int widthY = getIntParam(cell, "\\Y_WIDTH");
-
-//   int maxWidth = max(widthA, widthB);
-
-//   string instName = coreirSafeName(cellName);
-
-//   // TODO: Check that the operation is not bitwise
-  
-//   string coreName = coreirOpName(cellTp);
-//   auto inst = def->addInstance(instName, coreName, {{"width", CoreIR::Const::make(c, maxWidth)}});
-
-//   instMap[cell] = inst;
-// }
-
 map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
                                        std::map<string, CoreIR::Module*>& modMap,
                                        CoreIR::Context* const c,
@@ -473,165 +386,6 @@ void printSigSigInfo(RTLIL::SigSig conn) {
       cout << "\tSigSpec snd" << endl;
       cout << "\t\tis wire  = " << snd.is_wire() << endl;
       cout << "\t\tis chunk = " << snd.is_chunk() << endl;
-}
-
-void addConnections(RTLIL::Module* const rmod,
-                    map<Cell*, Instance*>& instMap,
-                    CoreIR::ModuleDef* const def) {
-
-  auto* self = def->sel("self");
-
-  for (auto& cell_iter : rmod->cells_) {
-    Cell* cell = cell_iter.second;
-
-    // Add connections to output ports
-    cout << "Adding output connections" << endl;
-    for (auto& conn : rmod->connections()) {
-
-      RTLIL::SigSpec fst = conn.first;
-      RTLIL::SigSpec snd = conn.second;
-      
-      assert(fst.is_wire());
-      assert(snd.is_wire());
-
-      Wire* wIn = fst.as_wire();
-
-      cout << "\t\t Wire: " << id2cstr(wIn->name) << ", width = " <<
-        wIn->width << ", " << "start_offset = " << wIn->start_offset <<
-        ", port_id = " << wIn->port_id << endl;
-
-      auto inName = wIn->name;
-
-      Wire* w = snd.as_wire();
-
-      string s = id2cstr(w->name);
-
-      reverse(begin(s), end(s));
-      string portName = s.substr(0, s.find("_"));
-      string cellName = s.substr(s.find("_") + 1, s.size());
-
-      reverse(begin(cellName), end(cellName));
-      reverse(begin(portName), end(portName));
-
-      cout << "cellName = " << cellName << endl;
-      cout << "portName = " << portName << endl;
-
-      cout << "\t\t Wire: " << id2cstr(w->name) << ", width = " <<
-        w->width << ", " << "start_offset = " << w->start_offset <<
-        ", port_id = " << w->port_id << endl;
-
-      assert(portName == "Y");
-
-      auto targetCell = rmod->cells_[IdString(cellName)];
-
-      assert(targetCell != nullptr);
-
-      auto targetInst = instMap[targetCell];
-
-      assert(targetInst != nullptr);
-
-      def->connect(self->sel(id2cstr(inName)), targetInst->sel("out"));
-
-    }
-        
-    // Add connections to instances
-    cout << "Connections" << endl;
-
-    auto* inst = instMap[cell];        
-
-    for (auto conn : cell->connections()) {
-
-
-      RTLIL::SigSpec ss = conn.second;
-      
-      cout << "\tSigSpec " << id2cstr(conn.first) << " size = " << ss.size() << ", is_wire = " << ss.is_wire() << ", is chunk = " << ss.is_chunk() << endl;
-
-      if (ss.is_chunk() && !ss.is_wire()) {
-        for (auto& sigChunk : ss.chunks()) {
-
-          if (sigChunk.wire != nullptr) {
-            cout << "Wire = " << id2cstr(sigChunk.wire->name) << endl;
-          } else {
-            cout << "Wire is null" << endl;
-
-            for (auto& state : sigChunk.data) {
-              cout << "State = " << state << endl;
-            }
-          }
-        }
-        continue;
-        //assert(false);
-      }
-
-      assert(ss.is_wire());
-
-      Wire* w = ss.as_wire();
-
-      cout << "\t\t Wire: " << id2cstr(w->name) << ", width = " <<
-        w->width << ", " << "start_offset = " << w->start_offset <<
-        ", port_id = " << w->port_id << endl;
-
-
-      Select* from = nullptr;
-      Select* to = nullptr;
-
-      string connName = id2cstr(conn.first);
-      cout << "connName = " << connName << endl;
-      if ((connName != "A") && (connName != "B")) {
-        continue;
-      }
-
-      if (connName == "A") {
-        to = inst->sel("in0");
-      } else if (connName == "B") {
-        to = inst->sel("in1");
-      } else {
-        assert(false);
-      }
-          
-      if (w->port_input || w->port_output) {
-
-        from = self->sel(id2cstr(w->name));
-
-      } else {
-        string s = id2cstr(w->name);
-
-
-        cout << "s = " << s << endl;
-
-      reverse(begin(s), end(s));
-      string portName = s.substr(0, s.find("_"));
-      string cellName = s.substr(s.find("_") + 1, s.size());
-
-      reverse(begin(cellName), end(cellName));
-      reverse(begin(portName), end(portName));
-
-        // string cellName = s.substr(0, s.find("_"));
-        // string portName = s.substr(s.find("_") + 1, s.size());
-
-        auto targetCell = rmod->cells_[IdString(cellName)];
-
-        assert(targetCell != nullptr);
-
-        cout << "targetCell = " << id2cstr(targetCell->name) << endl;
-
-        auto targetInst = instMap[targetCell];
-
-        assert(targetInst != nullptr);
-
-        // TODO: Create select string from the yosys port name instead of
-        // "out"
-        from = targetInst->sel("out");
-      }
-
-      assert(from != nullptr);
-      assert(to != nullptr);
-
-      def->connect(from, to);
-          
-    }
-
-  }
 }
 
 std::string coreirPort(Cell* const cell,
@@ -784,13 +538,26 @@ buildSelectMap(RTLIL::Module* const rmod,
   // Build map from 
   dict<SigBit, Cell*> sigbit_to_driver_index;
   dict<SigBit, string> sigbit_to_driver_port_index;
+  dict<SigBit, int> sigbit_to_driver_offset;
+
   for (auto cell : rmod->cells()) {
     for (auto conn : cell->connections()) {
       if (cell->output(conn.first)) {
+
+        int i = 0;
         for (auto bit : sigmap(conn.second)) {
           //for (auto bit : conn.second) {
           sigbit_to_driver_index[bit] = cell;
           sigbit_to_driver_port_index[bit] = id2cstr(conn.first);
+          sigbit_to_driver_offset[bit] = i;
+
+          // if (bit.offset != i) {
+          //   cout << "bit.offset = " << bit.offset << endl;
+          //   cout << "i          = " << i << endl;
+          //   assert(false);
+          // }
+
+          i++;
         }
       }
     }
@@ -840,17 +607,18 @@ buildSelectMap(RTLIL::Module* const rmod,
             Select* to = instanceSelect(cell,
                                         id2cstr(conn.first),
                                         i,
+                                        //bit.offset,
                                         instMap);
             cout << "to = " << to->toString() << endl;
 
             Select* from = nullptr;
             if (driver != nullptr) {
-              from = instanceSelect(driver, port, i /*bit.offset*/, instMap);
+              from = instanceSelect(driver, port, sigbit_to_driver_offset[bit], /*bit.offset*/ instMap);
             } else {
 
               from = def->sel("self")->sel(port);
               if (!isBitType(from->getType())) {
-                from = from->sel(bit.offset);
+                from = from->sel(sigbit_to_driver_offset[bit]);
               } else {
                 assert(bit.offset == 0);
               }
@@ -1087,9 +855,6 @@ struct ToCoreIRPass : public Yosys::Pass {
 	ToCoreIRPass() : Pass("to_coreir") { }
 
   virtual void execute(std::vector<std::string>, RTLIL::Design *design) {
-
-
-    
     // Seems like wires are everything 
 
     // for (auto it : design->modules()) {
@@ -1128,7 +893,6 @@ struct ToCoreIRPass : public Yosys::Pass {
       buildSelectMap(rmod, instMap, c, def);
       //cout << "Adding connections for module = " << mod->getName() << endl;
 
-      //addConnections(rmod, instMap, def);
       mod->setDef(def);
     }
 
