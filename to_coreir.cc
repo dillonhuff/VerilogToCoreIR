@@ -596,7 +596,8 @@ buildSelectMap(RTLIL::Module* const rmod,
             if (sigbit_to_driver_port_index.find(bit) ==
                 end(sigbit_to_driver_port_index)) {
               cout << "Bit " << bit.offset << " for wire " << id2cstr(bit.wire->name) << " has no port?" << endl;
-              assert(false);
+              //assert(false);
+              continue;
             }
 
             string port = sigbit_to_driver_port_index[bit];
@@ -725,131 +726,6 @@ buildSelectMap(RTLIL::Module* const rmod,
 
   return;
 
-  // for (auto& conn : rmod->connections()) {
-
-  //   SigSpec portSig = conn.first;
-  //   SigSpec resSig = conn.second;
-
-  //   assert(portSig.is_wire());
-  //   assert(resSig.is_wire());
-
-  //   Wire* w = portSig.as_wire();
-  //   Wire* r = resSig.as_wire();
-  //   cout << "w = " << id2cstr(w->name) << endl;
-  //   cout << "r = " << id2cstr(w->name) << endl;
-
-  //   assert(w->port_input || w->port_output);
-
-  // }
-
-  // dict<SigBit, Cell*> sigbit_to_receiver_index;
-  // dict<SigBit, string> sigbit_to_receiver_port_index;
-  // for (auto cell : rmod->cells()) {
-  //   for (auto conn : cell->connections()) {
-  //     if (cell->input(conn.first)) {
-  //       for (auto bit : sigmap(conn.second)) {
-  //         sigbit_to_receiver_index[bit] = cell;
-  //         sigbit_to_receiver_port_index[bit] = id2cstr(conn.first);
-  //       }
-  //     }
-  //   }
-  // }
-
-
-  // // NOTE: This may not handle cross connections correctly, not sure how to
-  // // get those offsets
-
-  // // NOTE: I also have not tested one to many connections
-  // cout << "All wires" << endl;
-  // for (auto wire : rmod->wires()) {
-  //   cout << "\t" << id2cstr(wire->name) << endl;
-  //   int i = 0;
-
-  //   if (wire->port_output) {
-  //     cout << "### output = " << id2cstr(wire->name) << endl;
-  //   } else if (wire->port_input) {
-  //     cout << "### input = " << id2cstr(wire->name) << endl;
-
-  //     for (auto& bit : sigmap(wire)) {
-
-  //       Cell* driverCell = sigbit_to_driver_index[bit];
-  //       assert(driverCell == nullptr);
-
-  //       Cell* receiverCell = sigbit_to_receiver_index[bit];
-        
-  //       if (receiverCell != nullptr) {
-
-  //         string driverPort = id2cstr(wire->name);
-  //         string receiverPort = sigbit_to_receiver_port_index[bit];
-
-  //         // NOTE: What should bit.offset be here?
-  //         auto driverSelPort = def->sel("self")->sel(driverPort);
-  //         Select* driverSel = driverSelPort;
-  //         if ((driverSelPort->getType()->getKind() == Type::TK_Bit) ||
-  //             (driverSelPort->getType()->getKind() == Type::TK_BitIn)) {
-  //           assert(bit.offset == 0);
-  //         } else {
-  //           driverSel = driverSelPort->sel(bit.offset);
-  //         }
-
-  //         // NOTE: What should bit.offset be here?
-  //         auto receiverSel =
-  //           instanceSelect(receiverCell, receiverPort, bit.offset, instMap);
-
-  //         def->connect(driverSel, receiverSel);
-  //       }
-  //       i++;
-
-  //     }
-      
-  //   } else {
-
-  //     for (auto& bit : sigmap(wire)) {
-
-  //       // cout << "\t\tBit wire = " << id2cstr(bit.wire->name) << endl;
-  //       // cout << "\t\tDrivers" << endl;
-  //       Cell* driverCell = sigbit_to_driver_index[bit];
-
-  //       // if (driverCell != nullptr) {
-  //       //   cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = " << id2cstr(sigbit_to_driver_index[bit]->name) << "." << sigbit_to_driver_port_index[bit] << endl;
-  //       // } else {
-  //       //   cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = NULL;" << endl;
-  //       // }
-
-  //       //cout << "\t\tReceivers" << endl;
-  //       Cell* receiverCell = sigbit_to_receiver_index[bit];
-
-  //       // if (receiverCell != nullptr) {
-  //       //   cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = " << id2cstr(sigbit_to_receiver_index[bit]->name) << "." << sigbit_to_receiver_port_index[bit] << endl;
-  //       // } else {
-  //       //   cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = NULL;" << endl;
-  //       // }
-
-  //       if ((receiverCell != nullptr) &&
-  //           (driverCell != nullptr)) {
-
-  //         string driverPort = sigbit_to_driver_port_index[bit];
-  //         string receiverPort = sigbit_to_receiver_port_index[bit];
-
-  //         // NOTE: What should bit.offset be here?
-  //         auto driverSel =
-  //           instanceSelect(driverCell, driverPort, bit.offset, instMap);
-
-  //         // NOTE: What should bit.offset be here?
-  //         auto receiverSel =
-  //           instanceSelect(receiverCell, receiverPort, bit.offset, instMap);
-
-  //         def->connect(driverSel, receiverSel);
-  //       } else {
-  //         cout << "Wire = " << id2cstr(wire->name) << endl;
-  //         //assert(wire->port_input || wire->port_output);
-  //       }
-      
-  //       i++;
-  //     }
-  //   }
-  // }
-
 }
 
 
@@ -901,6 +777,11 @@ struct ToCoreIRPass : public Yosys::Pass {
     assert(modMap.size() > 0);
 
     CoreIR::Module* top = begin(modMap)->second;
+
+    if (modMap.find("top") != end(modMap)) {
+      top = modMap["top"];
+    }
+
     string fileName = top->getName() + ".json";
     cout << "Saving to " << fileName << endl;
     if (!saveToFile(g, fileName, top)) {

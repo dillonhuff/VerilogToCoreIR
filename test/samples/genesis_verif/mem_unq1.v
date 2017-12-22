@@ -59,19 +59,19 @@ wire clk_d;
 
 assign #0.1 clk_d = clk;
 
-sram_512w_16b mem_inst(
-.Q(data_out), 
-.CLK(clk),
-.CEN(~cen), 
-.WEN(~wen), 
-.A(addr), 
-.D(data_in), 
-.EMA(3'd0), 
-.EMAW(2'd0), 
-.EMAS(1'b0), 
-.TEN(1'b1),
-.BEN(1'b1),
-.RET1N(1'b1),
-.STOV(1'b0));
+// sram_512w_16b mem_inst(
+// .Q(data_out), 
+// .CLK(clk),
+// .CEN(~cen), 
+// .WEN(~wen), 
+// .A(addr), 
+// .D(data_in), 
+// .EMA(3'd0), 
+// .EMAW(2'd0), 
+// .EMAS(1'b0), 
+// .TEN(1'b1),
+// .BEN(1'b1),
+// .RET1N(1'b1),
+// .STOV(1'b0));
 
 endmodule

@@ -603,20 +603,20 @@ tile_id
 
 
 
-test_pe_unq1  test_pe
- (
-  .clk(clk),
-  .rst_n(~reset),
-  .clk_en(1'b1),
-  .cfg_d(config_data[15:0]),
-  .cfg_a(config_addr[31:24]),
-  .cfg_en(config_en_pe),
-  .op_a_in(op_a_in),
-  .op_b_in(op_b_in),
-  .op_d_p_in(op_d_p_in),
-  .op_e_p_in(op_e_p_in),
-  .op_f_p_in(op_f_p_in),
-  .res(pe_out_res),
-  .res_p(pe_out_res_p)
-);
+// test_pe_unq1  test_pe
+//  (
+//   .clk(clk),
+//   .rst_n(~reset),
+//   .clk_en(1'b1),
+//   .cfg_d(config_data[15:0]),
+//   .cfg_a(config_addr[31:24]),
+//   .cfg_en(config_en_pe),
+//   .op_a_in(op_a_in),
+//   .op_b_in(op_b_in),
+//   .op_d_p_in(op_d_p_in),
+//   .op_e_p_in(op_e_p_in),
+//   .op_f_p_in(op_f_p_in),
+//   .res(pe_out_res),
+//   .res_p(pe_out_res_p)
+// );
 endmodule
