@@ -742,113 +742,113 @@ buildSelectMap(RTLIL::Module* const rmod,
 
   // }
 
-  dict<SigBit, Cell*> sigbit_to_receiver_index;
-  dict<SigBit, string> sigbit_to_receiver_port_index;
-  for (auto cell : rmod->cells()) {
-    for (auto conn : cell->connections()) {
-      if (cell->input(conn.first)) {
-        for (auto bit : sigmap(conn.second)) {
-          sigbit_to_receiver_index[bit] = cell;
-          sigbit_to_receiver_port_index[bit] = id2cstr(conn.first);
-        }
-      }
-    }
-  }
+  // dict<SigBit, Cell*> sigbit_to_receiver_index;
+  // dict<SigBit, string> sigbit_to_receiver_port_index;
+  // for (auto cell : rmod->cells()) {
+  //   for (auto conn : cell->connections()) {
+  //     if (cell->input(conn.first)) {
+  //       for (auto bit : sigmap(conn.second)) {
+  //         sigbit_to_receiver_index[bit] = cell;
+  //         sigbit_to_receiver_port_index[bit] = id2cstr(conn.first);
+  //       }
+  //     }
+  //   }
+  // }
 
 
-  // NOTE: This may not handle cross connections correctly, not sure how to
-  // get those offsets
+  // // NOTE: This may not handle cross connections correctly, not sure how to
+  // // get those offsets
 
-  // NOTE: I also have not tested one to many connections
-  cout << "All wires" << endl;
-  for (auto wire : rmod->wires()) {
-    cout << "\t" << id2cstr(wire->name) << endl;
-    int i = 0;
+  // // NOTE: I also have not tested one to many connections
+  // cout << "All wires" << endl;
+  // for (auto wire : rmod->wires()) {
+  //   cout << "\t" << id2cstr(wire->name) << endl;
+  //   int i = 0;
 
-    if (wire->port_output) {
-      cout << "### output = " << id2cstr(wire->name) << endl;
-    } else if (wire->port_input) {
-      cout << "### input = " << id2cstr(wire->name) << endl;
+  //   if (wire->port_output) {
+  //     cout << "### output = " << id2cstr(wire->name) << endl;
+  //   } else if (wire->port_input) {
+  //     cout << "### input = " << id2cstr(wire->name) << endl;
 
-      for (auto& bit : sigmap(wire)) {
+  //     for (auto& bit : sigmap(wire)) {
 
-        Cell* driverCell = sigbit_to_driver_index[bit];
-        assert(driverCell == nullptr);
+  //       Cell* driverCell = sigbit_to_driver_index[bit];
+  //       assert(driverCell == nullptr);
 
-        Cell* receiverCell = sigbit_to_receiver_index[bit];
+  //       Cell* receiverCell = sigbit_to_receiver_index[bit];
         
-        if (receiverCell != nullptr) {
+  //       if (receiverCell != nullptr) {
 
-          string driverPort = id2cstr(wire->name);
-          string receiverPort = sigbit_to_receiver_port_index[bit];
+  //         string driverPort = id2cstr(wire->name);
+  //         string receiverPort = sigbit_to_receiver_port_index[bit];
 
-          // NOTE: What should bit.offset be here?
-          auto driverSelPort = def->sel("self")->sel(driverPort);
-          Select* driverSel = driverSelPort;
-          if ((driverSelPort->getType()->getKind() == Type::TK_Bit) ||
-              (driverSelPort->getType()->getKind() == Type::TK_BitIn)) {
-            assert(bit.offset == 0);
-          } else {
-            driverSel = driverSelPort->sel(bit.offset);
-          }
+  //         // NOTE: What should bit.offset be here?
+  //         auto driverSelPort = def->sel("self")->sel(driverPort);
+  //         Select* driverSel = driverSelPort;
+  //         if ((driverSelPort->getType()->getKind() == Type::TK_Bit) ||
+  //             (driverSelPort->getType()->getKind() == Type::TK_BitIn)) {
+  //           assert(bit.offset == 0);
+  //         } else {
+  //           driverSel = driverSelPort->sel(bit.offset);
+  //         }
 
-          // NOTE: What should bit.offset be here?
-          auto receiverSel =
-            instanceSelect(receiverCell, receiverPort, bit.offset, instMap);
+  //         // NOTE: What should bit.offset be here?
+  //         auto receiverSel =
+  //           instanceSelect(receiverCell, receiverPort, bit.offset, instMap);
 
-          def->connect(driverSel, receiverSel);
-        }
-        i++;
+  //         def->connect(driverSel, receiverSel);
+  //       }
+  //       i++;
 
-      }
+  //     }
       
-    } else {
+  //   } else {
 
-      for (auto& bit : sigmap(wire)) {
+  //     for (auto& bit : sigmap(wire)) {
 
-        // cout << "\t\tBit wire = " << id2cstr(bit.wire->name) << endl;
-        // cout << "\t\tDrivers" << endl;
-        Cell* driverCell = sigbit_to_driver_index[bit];
+  //       // cout << "\t\tBit wire = " << id2cstr(bit.wire->name) << endl;
+  //       // cout << "\t\tDrivers" << endl;
+  //       Cell* driverCell = sigbit_to_driver_index[bit];
 
-        // if (driverCell != nullptr) {
-        //   cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = " << id2cstr(sigbit_to_driver_index[bit]->name) << "." << sigbit_to_driver_port_index[bit] << endl;
-        // } else {
-        //   cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = NULL;" << endl;
-        // }
+  //       // if (driverCell != nullptr) {
+  //       //   cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = " << id2cstr(sigbit_to_driver_index[bit]->name) << "." << sigbit_to_driver_port_index[bit] << endl;
+  //       // } else {
+  //       //   cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = NULL;" << endl;
+  //       // }
 
-        //cout << "\t\tReceivers" << endl;
-        Cell* receiverCell = sigbit_to_receiver_index[bit];
+  //       //cout << "\t\tReceivers" << endl;
+  //       Cell* receiverCell = sigbit_to_receiver_index[bit];
 
-        // if (receiverCell != nullptr) {
-        //   cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = " << id2cstr(sigbit_to_receiver_index[bit]->name) << "." << sigbit_to_receiver_port_index[bit] << endl;
-        // } else {
-        //   cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = NULL;" << endl;
-        // }
+  //       // if (receiverCell != nullptr) {
+  //       //   cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = " << id2cstr(sigbit_to_receiver_index[bit]->name) << "." << sigbit_to_receiver_port_index[bit] << endl;
+  //       // } else {
+  //       //   cout << "\t\t" << id2cstr(wire->name) << " " << bit.offset << " = NULL;" << endl;
+  //       // }
 
-        if ((receiverCell != nullptr) &&
-            (driverCell != nullptr)) {
+  //       if ((receiverCell != nullptr) &&
+  //           (driverCell != nullptr)) {
 
-          string driverPort = sigbit_to_driver_port_index[bit];
-          string receiverPort = sigbit_to_receiver_port_index[bit];
+  //         string driverPort = sigbit_to_driver_port_index[bit];
+  //         string receiverPort = sigbit_to_receiver_port_index[bit];
 
-          // NOTE: What should bit.offset be here?
-          auto driverSel =
-            instanceSelect(driverCell, driverPort, bit.offset, instMap);
+  //         // NOTE: What should bit.offset be here?
+  //         auto driverSel =
+  //           instanceSelect(driverCell, driverPort, bit.offset, instMap);
 
-          // NOTE: What should bit.offset be here?
-          auto receiverSel =
-            instanceSelect(receiverCell, receiverPort, bit.offset, instMap);
+  //         // NOTE: What should bit.offset be here?
+  //         auto receiverSel =
+  //           instanceSelect(receiverCell, receiverPort, bit.offset, instMap);
 
-          def->connect(driverSel, receiverSel);
-        } else {
-          cout << "Wire = " << id2cstr(wire->name) << endl;
-          //assert(wire->port_input || wire->port_output);
-        }
+  //         def->connect(driverSel, receiverSel);
+  //       } else {
+  //         cout << "Wire = " << id2cstr(wire->name) << endl;
+  //         //assert(wire->port_input || wire->port_output);
+  //       }
       
-        i++;
-      }
-    }
-  }
+  //       i++;
+  //     }
+  //   }
+  // }
 
 }
 
