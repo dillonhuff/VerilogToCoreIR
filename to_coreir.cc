@@ -24,11 +24,6 @@ PRIVATE_NAMESPACE_BEGIN
 
 void print_cell_info(RTLIL::Cell* const cell);
 
-// Extending node used to extend
-void addExtend(CoreIR::Context* const c) {
-  
-}
-
 bool isRTLILBinop(const std::string& cellTp) {
   if (cellTp[0] == '$') {
     string opName = cellTp.substr(1, cellTp.size());
