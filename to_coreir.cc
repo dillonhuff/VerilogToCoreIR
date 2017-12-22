@@ -161,6 +161,22 @@ Namespace* CoreIRLoadLibrary_rtlil(CoreIR::Context* const c) {
                       });
 
   rtLib->newGeneratorDecl("adff", adffTP, adffParams);
+
+  Params dlatchParams = {{"WIDTH", c->Int()}, {"EN_POLARITY", c->Bool()}};
+  TypeGen* dlatchTP =
+    rtLib->newTypeGen(
+                      "dlatch",
+                      dlatchParams,
+                      [](Context* c, Values genargs) {
+                        uint width = genargs.at("WIDTH")->get<int>();
+
+                        return c->Record({
+                              {"D", c->BitIn()->Arr(width)},
+                                {"EN", c->BitIn()},
+                                  {"Q", c->Bit()->Arr(width)}});
+                      });
+
+  rtLib->newGeneratorDecl("dlatch", dlatchTP, dlatchParams);
   
   return rtLib;
 }
@@ -275,6 +291,10 @@ void print_cell_info(RTLIL::Cell* const cell) {
       param.second.as_string().c_str() << endl;
   }
 
+  for (auto& conn : cell->connections()) {
+    cout << "\tPort: " << id2cstr(conn.first) << endl;
+  }
+
 }
 
 map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
@@ -353,6 +373,19 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
 
       instMap[cell] = inst;
       
+    } else if (cellTp == "$dlatch") {
+
+      string instName = coreirSafeName(cellName);
+
+      int width = getIntParam(cell, "\\WIDTH");
+      int polarity = getIntParam(cell, "\\EN_POLARITY");
+
+      auto inst = def->addInstance(instName, "rtlil.dlatch",
+                                   {{"WIDTH", CoreIR::Const::make(c, width)},
+                                       {"EN_POLARITY", CoreIR::Const::make(c, (bool) polarity)}});
+
+      instMap[cell] = inst;
+
     } else if (cellTp == "$dff") {
 
       string instName = coreirSafeName(cellName);
