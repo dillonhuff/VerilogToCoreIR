@@ -565,8 +565,11 @@ buildSelectMap(RTLIL::Module* const rmod,
 
   for (auto wire : rmod->wires()) {
     if (wire->port_input) {
+      int i = 0;
       for (auto bit : sigmap(wire)) {
         sigbit_to_driver_port_index[bit] = id2cstr(wire->name);
+        sigbit_to_driver_offset[bit] = i;
+        i++;
       }
     }
   }
@@ -619,6 +622,10 @@ buildSelectMap(RTLIL::Module* const rmod,
 
               from = def->sel("self")->sel(port);
               if (!isBitType(from->getType())) {
+                // The sigbit
+                assert(sigbit_to_driver_offset.find(bit) !=
+                       end(sigbit_to_driver_offset));
+
                 from = from->sel(sigbit_to_driver_offset[bit]);
               } else {
                 assert(bit.offset == 0);
