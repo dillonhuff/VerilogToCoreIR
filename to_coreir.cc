@@ -324,31 +324,31 @@ std::string coreirOpName(const std::string& cellTp) {
   assert(false);
 }
 
-void addBinaryComparator(const std::string& cellTp,
-                         Cell* const cell,
-                         std::map<Cell*, CoreIR::Instance*>& instMap,
-                         CoreIR::ModuleDef* const def,
-                         CoreIR::Context* const c) {
-  // cout << "Add cell = " << cellName << endl;
-  // print_cell_info(cell);
+// void addBinaryComparator(const std::string& cellTp,
+//                          Cell* const cell,
+//                          std::map<Cell*, CoreIR::Instance*>& instMap,
+//                          CoreIR::ModuleDef* const def,
+//                          CoreIR::Context* const c) {
+//   // cout << "Add cell = " << cellName << endl;
+//   // print_cell_info(cell);
 
-  string cellName = id2cstr(cell->name);
+//   string cellName = id2cstr(cell->name);
   
-  int widthA = getIntParam(cell, "\\A_WIDTH");
-  int widthB = getIntParam(cell, "\\B_WIDTH");
-  int widthY = getIntParam(cell, "\\Y_WIDTH");
+//   int widthA = getIntParam(cell, "\\A_WIDTH");
+//   int widthB = getIntParam(cell, "\\B_WIDTH");
+//   int widthY = getIntParam(cell, "\\Y_WIDTH");
 
-  int maxWidth = max(widthA, widthB);
+//   int maxWidth = max(widthA, widthB);
 
-  string instName = coreirSafeName(cellName);
+//   string instName = coreirSafeName(cellName);
 
-  // TODO: Check that the operation is not bitwise
+//   // TODO: Check that the operation is not bitwise
   
-  string coreName = coreirOpName(cellTp);
-  auto inst = def->addInstance(instName, coreName, {{"width", CoreIR::Const::make(c, maxWidth)}});
+//   string coreName = coreirOpName(cellTp);
+//   auto inst = def->addInstance(instName, coreName, {{"width", CoreIR::Const::make(c, maxWidth)}});
 
-  instMap[cell] = inst;
-}
+//   instMap[cell] = inst;
+// }
 
 map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
                                        std::map<string, CoreIR::Module*>& modMap,
@@ -839,7 +839,7 @@ buildSelectMap(RTLIL::Module* const rmod,
             // From driver to the current bit
             Select* to = instanceSelect(cell,
                                         id2cstr(conn.first),
-                                        bit.offset, //i
+                                        i,
                                         instMap);
             cout << "to = " << to->toString() << endl;
 
@@ -892,10 +892,13 @@ buildSelectMap(RTLIL::Module* const rmod,
   cout << "Adding output connections to wires" << endl;
   for (auto wire : rmod->wires()) {
     if (wire->port_output) {
+
+      cout << "Wiring up inputs to output port " << id2cstr(wire->name) << endl;
+      int i = 0;
       for (auto bit : sigmap(wire)) {
 
         if (bit.wire != nullptr) {
-          cout << "Bit wire = " << id2cstr(bit.wire->name) << endl;
+          cout << "Bit wire = " << id2cstr(bit.wire->name) << ", offset = " << bit.offset << endl;
 
           if (sigbit_to_driver_port_index.find(bit) !=
               end(sigbit_to_driver_port_index)) {
@@ -910,15 +913,16 @@ buildSelectMap(RTLIL::Module* const rmod,
             }
             cout << "Driver port = " << port << endl;
 
-            cout << "Wiring up " << id2cstr(wire->name) << endl;
+            cout << "Wiring up " << id2cstr(wire->name) << ", i = " << i << endl;
             Select* from = nullptr;
             if (driver != nullptr) {
+              cout << "Wiring up driver" << endl;
               from = instanceSelect(driver, port, bit.offset, instMap);
             } else {
 
               from = def->sel("self")->sel(port);
               if (!isBitType(from->getType())) {
-                from = from->sel(bit.offset);
+                from = from->sel(i); //bit.offset);
               } else {
                 assert(bit.offset == 0);
               }
@@ -926,10 +930,12 @@ buildSelectMap(RTLIL::Module* const rmod,
         
             assert(from != nullptr);
 
+            cout << "Wiring to select" << endl;
             // E.g. self->out0
             Select* to = cast<Select>(def->sel("self")->sel(id2cstr(wire->name)));
             if (!isBitType(to->getType())) {
               to = to->sel(bit.offset);
+              //to = to->sel(i);
             } else {
               assert(bit.offset == 0);
             }
@@ -942,6 +948,7 @@ buildSelectMap(RTLIL::Module* const rmod,
           cout << "Wire is null, data = " << bit.data << endl;
           assert(false);
         }
+        i++;
       }
     }
   }
