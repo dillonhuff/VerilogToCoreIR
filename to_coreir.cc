@@ -142,7 +142,26 @@ Namespace* CoreIRLoadLibrary_rtlil(CoreIR::Context* const c) {
                       });
 
   rtLib->newGeneratorDecl("dff", dffTP, dffParams);
-    
+
+  Params adffParams = {{"WIDTH", c->Int()}, {"CLK_POLARITY", c->Bool()},
+                       // NOTE: ARST_VALUE should really be a bit vector
+                       {"ARST_POLARITY", c->Bool()}, {"ARST_VALUE", c->Int()}};
+  TypeGen* adffTP =
+    rtLib->newTypeGen(
+                      "adff",
+                      adffParams,
+                      [](Context* c, Values genargs) {
+                        uint width = genargs.at("WIDTH")->get<int>();
+
+                        return c->Record({
+                            {"CLK", c->BitIn()},
+                              {"D", c->BitIn()->Arr(width)},
+                                {"ARST", c->BitIn()},
+                                  {"Q", c->Bit()->Arr(width)}});
+                      });
+
+  rtLib->newGeneratorDecl("adff", adffTP, adffParams);
+  
   return rtLib;
 }
 
@@ -336,8 +355,6 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
       
     } else if (cellTp == "$dff") {
 
-      // string opName = cellTp.substr(1, cellTp.size());
-      // cout << "opName = " << opName << endl;
       string instName = coreirSafeName(cellName);
 
       int width = getIntParam(cell, "\\WIDTH");
@@ -346,6 +363,23 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
       auto inst = def->addInstance(instName, "rtlil.dff",
                                    {{"WIDTH", CoreIR::Const::make(c, width)},
                                        {"CLK_POLARITY", CoreIR::Const::make(c, (bool) polarity)}});
+
+      instMap[cell] = inst;
+
+    } else if (cellTp == "$adff") {
+
+      string instName = coreirSafeName(cellName);
+
+      int width = getIntParam(cell, "\\WIDTH");
+      int polarity = getIntParam(cell, "\\CLK_POLARITY");
+      int rstPolarity = getIntParam(cell, "\\ARST_POLARITY");
+      int rstValue = getIntParam(cell, "\\ARST_VALUE");
+
+      auto inst = def->addInstance(instName, "rtlil.adff",
+                                   {{"WIDTH", CoreIR::Const::make(c, width)},
+                                       {"CLK_POLARITY", CoreIR::Const::make(c, (bool) polarity)},
+                                         {"ARST_POLARITY", CoreIR::Const::make(c, (bool) rstPolarity)},
+                                           {"ARST_VALUE", CoreIR::Const::make(c, rstValue)}});
 
       instMap[cell] = inst;
 
