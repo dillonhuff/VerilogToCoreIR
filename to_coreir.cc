@@ -713,7 +713,7 @@ buildSelectMap(RTLIL::Module* const rmod,
                                         instMap);
 
             auto bitConst =
-              def->addInstance(to->toString() + "$bit_const_" + to_string(i),
+              def->addInstance(coreirSafeName(to->toString() + "$bit_const_" + to_string(i)),
                                "corebit.const",
                                {{"value", CoreIR::Const::make(c, bit.data == 1 ? true : false)}});;
 
@@ -838,8 +838,10 @@ struct ToCoreIRPass : public Yosys::Pass {
 
       map<Cell*, Instance*> instMap = buildInstanceMap(rmod, modMap, c, def);
 
+      cout << "# of instances in " << mod->getName() << " = " << instMap.size() << endl;
+
       buildSelectMap(rmod, instMap, c, def);
-      //cout << "Adding connections for module = " << mod->getName() << endl;
+      cout << "Setting definition for module = " << mod->getName() << endl;
 
       mod->setDef(def);
     }

@@ -8,7 +8,7 @@ test: to_coreir.so
 	yosys -p "proc; opt; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/constant/constant.v
 	yosys -p "proc; opt; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/sb_unq_slice/sb_unq_slice.v
 	yosys -p "proc; opt; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/adder/adder.v
-	yosys -p "proc; opt; pmuxtree; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/genesis_verif/*.v
+	yosys -p "proc; pmuxtree; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/genesis_verif/*.v
 
 to_coreir.so: to_coreir.cc
 	yosys-config --exec --cxx --cxxflags --ldflags -L/Users/dillon/CppWorkspace/coreir/lib/ -lcoreir -lcoreir-rtlil  -o $@ -shared $^ --ldlibs
