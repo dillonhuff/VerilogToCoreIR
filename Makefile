@@ -13,7 +13,7 @@ test: to_coreir.so
 
 	yosys -p "proc; memory; pmuxtree; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/mips-cpu/cpu.v
 
-	#yosys -p "proc; pmuxtree; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/genesis_verif/*.v
+	yosys -p "proc; pmuxtree; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/genesis_verif/*.v
 
 to_coreir.so: to_coreir.cc
 	yosys-config --exec --cxx --cxxflags --ldflags -L/Users/dillon/CppWorkspace/coreir/lib/ -lcoreir -lcoreir-rtlil  -o $@ -shared $^ --ldlibs

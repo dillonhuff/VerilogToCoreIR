@@ -219,7 +219,7 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
 
     if (isRTLILBinop(cellTp)) {
       string opName = cellTp.substr(1, cellTp.size());
-      cout << "opName = " << opName << endl;
+      //cout << "opName = " << opName << endl;
       string instName = coreirSafeName(cellName);
 
       int widthA = getIntParam(cell, "\\A_WIDTH");
@@ -240,7 +240,7 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
       
     } else if (isRTLILUnop(cellTp)) {
       string opName = cellTp.substr(1, cellTp.size());
-      cout << "opName = " << opName << endl;
+      //cout << "opName = " << opName << endl;
       string instName = coreirSafeName(cellName);
 
       int widthA = getIntParam(cell, "\\A_WIDTH");
@@ -256,7 +256,7 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
       
     } else if (cellTp == "$mux") {
       string opName = cellTp.substr(1, cellTp.size());
-      cout << "opName = " << opName << endl;
+      //cout << "opName = " << opName << endl;
       string instName = coreirSafeName(cellName);
 
       int width = getIntParam(cell, "\\WIDTH");
