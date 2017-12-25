@@ -597,7 +597,7 @@ buildSelectMap(RTLIL::Module* const rmod,
                                         i,
                                         //bit.offset,
                                         instMap);
-            cout << "to = " << to->toString() << endl;
+            //cout << "to = " << to->toString() << endl;
 
             Select* from = nullptr;
             if (driver != nullptr) {
@@ -618,7 +618,7 @@ buildSelectMap(RTLIL::Module* const rmod,
 
             assert(from != nullptr);
 
-            cout << "from = " << from->toString() << endl;
+            //cout << "from = " << from->toString() << endl;
 
             def->connect(from, to);
           } else {
