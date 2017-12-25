@@ -56,132 +56,6 @@ bool isRTLILUnop(const std::string& cellTp) {
   return false;
 }
 
-// Namespace* CoreIRLoadLibrary_rtlil(CoreIR::Context* const c) {
-//   auto rtLib = c->newNamespace("rtlil");
-
-
-
-//   vector<string> rtlilBinops{"and", "or", "xor", "xnor", "shl", "shr", "sshl", "sshr", "logic_and", "logic_or", "eqx", "nex", "lt", "le", "eq", "ne", "ge", "gt", "add", "sub", "mul", "div", "mod", "pow"};
-
-//   for (auto& name : rtlilBinops) {
-//     Params binopParams = {{"A_SIGNED", c->Bool()},
-//                           {"B_SIGNED", c->Bool()},
-//                           {"A_WIDTH", c->Int()},
-//                           {"B_WIDTH", c->Int()},
-//                           {"Y_WIDTH", c->Int()}};
-//     TypeGen* logic_andTP =
-//       rtLib->newTypeGen(
-//                         name,
-//                         binopParams,
-//                         [](Context* c, Values genargs) {
-//                           uint a_width = genargs.at("A_WIDTH")->get<int>();
-//                           uint b_width = genargs.at("B_WIDTH")->get<int>();
-//                           uint y_width = genargs.at("Y_WIDTH")->get<int>();
-
-//                           return c->Record({
-//                               {"A", c->BitIn()->Arr(a_width)},
-//                                 {"B", c->BitIn()->Arr(b_width)},
-//                                   {"Y",c->Bit()->Arr(y_width)}});
-//                         });
-
-//     rtLib->newGeneratorDecl(name, logic_andTP, binopParams);
-    
-//   }
-
-//   vector<string> rtlilUnops{"not", "pos", "neg", "reduce_and", "reduce_or", "reduce_xor", "reduce_xnor", "reduce_bool", "logic_not"};
-
-//   for (auto& name : rtlilUnops) {
-//     Params binopParams = {{"A_SIGNED", c->Bool()},
-//                           {"A_WIDTH", c->Int()},
-//                           {"Y_WIDTH", c->Int()}};
-//     TypeGen* logic_andTP =
-//       rtLib->newTypeGen(
-//                         name,
-//                         binopParams,
-//                         [](Context* c, Values genargs) {
-//                           uint a_width = genargs.at("A_WIDTH")->get<int>();
-//                           uint y_width = genargs.at("Y_WIDTH")->get<int>();
-
-//                           return c->Record({
-//                               {"A", c->BitIn()->Arr(a_width)},
-//                                 {"Y",c->Bit()->Arr(y_width)}});
-//                         });
-
-//     rtLib->newGeneratorDecl(name, logic_andTP, binopParams);
-    
-//   }
-
-//   Params muxParams = {{"WIDTH", c->Int()}};
-//   TypeGen* muxTP =
-//     rtLib->newTypeGen(
-//                       "rtMux",
-//                       muxParams,
-//                       [](Context* c, Values genargs) {
-//                         uint width = genargs.at("WIDTH")->get<int>();
-
-//                         return c->Record({
-//                             {"A", c->BitIn()->Arr(width)},
-//                               {"B", c->BitIn()->Arr(width)},
-//                                 {"S", c->BitIn()},
-//                                   {"Y",c->Bit()->Arr(width)}});
-//                       });
-
-//   rtLib->newGeneratorDecl("rtMux", muxTP, muxParams);
-
-//   Params dffParams = {{"WIDTH", c->Int()}, {"CLK_POLARITY", c->Bool()}};
-//   TypeGen* dffTP =
-//     rtLib->newTypeGen(
-//                       "dff",
-//                       dffParams,
-//                       [](Context* c, Values genargs) {
-//                         uint width = genargs.at("WIDTH")->get<int>();
-
-//                         return c->Record({
-//                             {"CLK", c->BitIn()},
-//                               {"D", c->BitIn()->Arr(width)},
-//                                 {"Q", c->Bit()->Arr(width)}});
-//                       });
-
-//   rtLib->newGeneratorDecl("dff", dffTP, dffParams);
-
-//   Params adffParams = {{"WIDTH", c->Int()}, {"CLK_POLARITY", c->Bool()},
-//                        // NOTE: ARST_VALUE should really be a bit vector
-//                        {"ARST_POLARITY", c->Bool()}, {"ARST_VALUE", c->Int()}};
-//   TypeGen* adffTP =
-//     rtLib->newTypeGen(
-//                       "adff",
-//                       adffParams,
-//                       [](Context* c, Values genargs) {
-//                         uint width = genargs.at("WIDTH")->get<int>();
-
-//                         return c->Record({
-//                             {"CLK", c->BitIn()},
-//                               {"D", c->BitIn()->Arr(width)},
-//                                 {"ARST", c->BitIn()},
-//                                   {"Q", c->Bit()->Arr(width)}});
-//                       });
-
-//   rtLib->newGeneratorDecl("adff", adffTP, adffParams);
-
-//   Params dlatchParams = {{"WIDTH", c->Int()}, {"EN_POLARITY", c->Bool()}};
-//   TypeGen* dlatchTP =
-//     rtLib->newTypeGen(
-//                       "dlatch",
-//                       dlatchParams,
-//                       [](Context* c, Values genargs) {
-//                         uint width = genargs.at("WIDTH")->get<int>();
-
-//                         return c->Record({
-//                               {"D", c->BitIn()->Arr(width)},
-//                                 {"EN", c->BitIn()},
-//                                   {"Q", c->Bit()->Arr(width)}});
-//                       });
-
-//   rtLib->newGeneratorDecl("dlatch", dlatchTP, dlatchParams);
-  
-//   return rtLib;
-// }
-
 int getIntParam(Cell* const cell, const std::string& str) {
   auto param = cell->parameters.find(str);
 
@@ -212,25 +86,24 @@ std::string coreirSafeName(const std::string cellName) {
   return instName;
 }
 
-std::map<string, CoreIR::Module*>
-buildModuleMap(RTLIL::Design * const design,
+void addModule(IdString& modName,
+               RTLIL::Module* rmod,
+               std::map<string, CoreIR::Module*>& modMap,
+               RTLIL::Design * const design,
                CoreIR::Context* const c,
                Namespace* const g) {
 
-  map<string, CoreIR::Module*> modMap;
-  for (auto &it : design->modules_) {
-
-    if (design->selected_module(it.first)) {
-
-        
-      RTLIL::Module* rmod = it.second;
-
-      //cout << "Ports" << endl;
+      cout << "Ports" << endl;
       for (auto& conn : rmod->ports) {
-        cout << id2cstr(conn) << endl;
+        cout << "\t" << id2cstr(conn) << endl;
       }
 
-      cout << "# of Connections = " << rmod->connections().size() << endl;
+      cout << "Parameters" << endl;
+      for (auto& param : rmod->avail_parameters) {
+        cout << "\t" << id2cstr(param) << endl;
+      }
+      
+      cout << "# of Connections in " << id2cstr(rmod->name) << " = " << rmod->connections().size() << endl;
       for (auto& conn : rmod->connections()) {
         RTLIL::SigSig s = conn;
         auto lhs = s.first;
@@ -266,8 +139,27 @@ buildModuleMap(RTLIL::Design * const design,
 
       }
 
-      modMap[id2cstr(it.first)] =
-        g->newModuleDecl(id2cstr(it.first), c->Record(args));
+      modMap[id2cstr(modName)] =
+        g->newModuleDecl(id2cstr(modName), c->Record(args));
+
+
+}
+
+std::map<string, CoreIR::Module*>
+buildModuleMap(RTLIL::Design * const design,
+               CoreIR::Context* const c,
+               Namespace* const g) {
+
+  map<string, CoreIR::Module*> modMap;
+  for (auto &it : design->modules_) {
+
+    if (design->selected_module(it.first)) {
+
+      cout << "Reading module " << id2cstr(it.second->name) << endl;
+        
+      RTLIL::Module* rmod = it.second;
+
+      addModule(it.first, rmod, modMap, design, c, g);
 
     }
   }
@@ -283,7 +175,7 @@ void print_cell_info(RTLIL::Cell* const cell) {
   cout << cellName << endl;
 
   cout << "Cell: " <<
-    RTLIL::id2cstr(cell->name) <<
+    RTLIL::id2cstr(cell->name) << " : " << 
     RTLIL::id2cstr(cell->type) << endl;
 
   for (auto& param : cell->parameters) {
@@ -293,7 +185,7 @@ void print_cell_info(RTLIL::Cell* const cell) {
   }
 
   for (auto& conn : cell->connections()) {
-    cout << "\tPort: " << id2cstr(conn.first) << endl;
+    cout << "\tPort: " << id2cstr(conn.first) << " : " << conn.second.size() << endl;
   }
 
 }
@@ -301,6 +193,7 @@ void print_cell_info(RTLIL::Cell* const cell) {
 map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
                                        std::map<string, CoreIR::Module*>& modMap,
                                        CoreIR::Context* const c,
+                                       CoreIR::Namespace* const g,
                                        CoreIR::ModuleDef* const def) {
 
   map<Cell*, Instance*> instMap;
@@ -429,8 +322,36 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
 
         assert(false);
       } else {
-        auto inst = def->addInstance(instName, modMap[cellTypeStr]);
-        instMap[cell] = inst;
+
+        if (cell->parameters.size() == 0) {
+
+          auto inst = def->addInstance(instName, modMap[cellTypeStr]);
+          instMap[cell] = inst;
+        } else {
+
+          RTLIL::Module* containerMod = cell->module;
+          Design* rtd = containerMod->design;
+
+          RTLIL::Module* rtmod = rtd->modules_[cell->type];
+          cout << "RTMOD = " << id2cstr(rtmod->name) << endl;
+
+          auto modInstName = rtmod->derive(rtmod->design, cell->parameters);
+          cout << "Derived module instance name = " << id2cstr(modInstName) << endl;
+
+          if (modMap.find(id2cstr(modInstName)) == end(modMap)) {
+            // Add to coreir module map
+            RTLIL::Module* genMod = rtmod->design->modules_[modInstName];
+
+            addModule(modInstName, genMod, modMap, rtd, c, g);
+
+            cout << "Generated module " << id2cstr(genMod->name) << " has " << genMod->avail_parameters.size() << " parameters" << endl;
+          }
+
+          auto inst = def->addInstance(instName, modMap[id2cstr(modInstName)]);
+          instMap[cell] = inst;
+          
+          //auto inst = def->addInstance();
+        }
       }
     }
   }
@@ -828,6 +749,10 @@ struct ToCoreIRPass : public Yosys::Pass {
 
       CoreIR::Module* mod = modMap[id2cstr(it.first)];
 
+      cout << "Parameters for " << mod->getName() << endl;
+      for (auto& param : (it.second)->avail_parameters) {
+        cout << "\t" << id2cstr(param) << endl;
+      }
       SigMap assign_map(it.second);
       
       assert(mod != nullptr);
@@ -836,7 +761,7 @@ struct ToCoreIRPass : public Yosys::Pass {
 
       RTLIL::Module* rmod = it.second;
 
-      map<Cell*, Instance*> instMap = buildInstanceMap(rmod, modMap, c, def);
+      map<Cell*, Instance*> instMap = buildInstanceMap(rmod, modMap, c, g, def);
 
       cout << "# of instances in " << mod->getName() << " = " << instMap.size() << endl;
 
