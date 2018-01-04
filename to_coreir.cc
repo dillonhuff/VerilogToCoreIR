@@ -81,6 +81,10 @@ std::string coreirSafeName(const std::string cellName) {
       instName += "__BACKSLASH__";
     } else if (cellName[i] == '=') {
       instName += "__EQUALS__";
+    } else if (cellName[i] == '[') {
+      instName += "__LEFT_BRACKET__";
+    } else if (cellName[i] == ']') {
+      instName += "__RIGHT_BRACKET__";
     } else {
       instName += cellName[i];
     }
@@ -192,6 +196,75 @@ void print_cell_info(RTLIL::Cell* const cell) {
     cout << "\tPort: " << id2cstr(conn.first) << " : " << conn.second.size() << endl;
   }
 
+}
+
+bool addGeneratedModule(RTLIL::Module* const rmod,
+                        std::map<string, CoreIR::Module*>& modMap,
+                        CoreIR::Context* const c,
+                        CoreIR::Namespace* const g,
+                        CoreIR::ModuleDef* const def) {
+
+  for (auto& cell_iter : rmod->cells_) {
+    Cell* cell = cell_iter.second;
+
+    string cellTp = RTLIL::id2cstr(cell->type);
+    string cellName = RTLIL::id2cstr(cell->name);
+        
+    if (isRTLILBinop(cellTp)) {
+      continue;
+    } else if (isRTLILUnop(cellTp)) {
+      continue;
+    } else if (cellTp == "$mux") {
+      continue;
+    } else if (cellTp == "$dlatch") {
+      continue;
+    } else if (cellTp == "$dff") {
+      continue;
+    } else if (cellTp == "$adff") {
+      continue;
+    } else {
+
+      string instName = coreirSafeName(cellName);
+
+      string cellTypeStr = id2cstr(cell->type);
+      if (modMap.find(cellTypeStr) == end(modMap)) {
+        cout << "Unsupported Cell type = " << id2cstr(cell->name) << " : " << id2cstr(cell->type) << ", skipping." << endl;
+
+        print_cell_info(cell);
+
+        assert(false);
+      } else {
+
+        if (cell->parameters.size() == 0) {
+          continue;
+        } else {
+
+          RTLIL::Module* containerMod = cell->module;
+          Design* rtd = containerMod->design;
+
+          RTLIL::Module* rtmod = rtd->modules_[cell->type];
+          cout << "RTMOD = " << id2cstr(rtmod->name) << endl;
+
+          auto modInstNameR = rtmod->derive(rtmod->design, cell->parameters);
+
+          string modInstName = coreirSafeName(id2cstr(modInstNameR));
+          cout << "Derived module instance name = " << modInstName << endl;
+
+          if (modMap.find(modInstName) == end(modMap)) {
+            // Add to coreir module map
+            RTLIL::Module* genMod = rtmod->design->modules_[modInstNameR];
+
+            addModule(modInstName, genMod, modMap, rtd, c, g);
+
+            cout << "Generated module " << id2cstr(genMod->name) << " has " << genMod->avail_parameters.size() << " parameters" << endl;
+            return true;
+          }
+        }
+      }
+    }
+  }
+
+  return false;
 }
 
 map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
@@ -716,8 +789,6 @@ struct ToCoreIRPass : public Yosys::Pass {
 	ToCoreIRPass() : Pass("to_coreir") { }
 
   virtual void execute(std::vector<std::string>, RTLIL::Design *design) {
-    // Seems like wires are everything 
-
     // for (auto it : design->modules()) {
 
     //   printModuleInfo(it);
@@ -735,6 +806,45 @@ struct ToCoreIRPass : public Yosys::Pass {
     CoreIRLoadLibrary_rtlil(c);
 
     map<string, CoreIR::Module*> modMap = buildModuleMap(design, c, g);
+
+    // TODO: Pre-run to generate modules?
+    cout << "Modules before  pre-run to generate parametric modules" << endl;
+    for (auto& it : design->modules_) {
+      string nm = id2cstr(it.first);
+
+      if (nm.size() >= 8) {
+        cout << "Prefix = " << nm.substr(0, 8) << endl;
+        if (nm.substr(0, 8) == "$paramod") {
+          cout << "\tGenerated!!" << endl;
+        }
+      }
+      cout << "\t" << id2cstr(it.first) << endl;
+    }
+
+    // Iterate over modules generating parametric modules, until there are no
+    // parametric modules left to generate
+    bool foundGen = true;
+    while (foundGen) {
+      foundGen = false;
+
+      for (auto &it : design->modules_) {
+
+        CoreIR::Module* mod = modMap[id2cstr(it.first)];
+
+        cout << "Parameters for " << mod->getName() << endl;
+        for (auto& param : (it.second)->avail_parameters) {
+          cout << "\t" << id2cstr(param) << endl;
+        }
+      
+        assert(mod != nullptr);
+
+        CoreIR::ModuleDef* def = mod->newModuleDef();
+
+        RTLIL::Module* rmod = it.second;
+
+        foundGen = addGeneratedModule(rmod, modMap, c, g, def);
+      }
+    }
 
     // Now with all modules added create module definitions
     for (auto &it : design->modules_) {
@@ -763,12 +873,28 @@ struct ToCoreIRPass : public Yosys::Pass {
       mod->setDef(def);
     }
 
+    cout << "Modules after running instance maps" << endl;
+    for (auto& it : design->modules_) {
+      string nm = id2cstr(it.first);
+
+      if (nm.size() >= 8) {
+        cout << "Prefix = " << nm.substr(0, 8) << endl;
+        if (nm.substr(0, 8) == "$paramod") {
+          cout << "\tGenerated!!" << endl;
+        }
+      }
+      cout << "\t" << id2cstr(it.first) << endl;
+    }
+    
+
     assert(modMap.size() > 0);
 
     CoreIR::Module* top = begin(modMap)->second;
 
     if (modMap.find("top") != end(modMap)) {
       top = modMap["top"];
+    } else if (modMap.find("cpu") != end(modMap)) {
+      top = modMap["cpu"];
     }
 
     string fileName = top->getName() + ".json";
