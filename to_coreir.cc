@@ -167,7 +167,7 @@ buildModuleMap(RTLIL::Design * const design,
         
       RTLIL::Module* rmod = it.second;
 
-      addModule(id2cstr(it.first), rmod, modMap, design, c, g);
+      addModule(coreirSafeName(id2cstr(it.first)), rmod, modMap, design, c, g);
 
     }
   }
@@ -388,7 +388,7 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
 
         if (cell->parameters.size() == 0) {
 
-          auto inst = def->addInstance(instName, modMap[cellTypeStr]);
+          auto inst = def->addInstance(instName, modMap[coreirSafeName(cellTypeStr)]);
           instMap[cell] = inst;
         } else {
 
@@ -412,7 +412,7 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
             cout << "Generated module " << id2cstr(genMod->name) << " has " << genMod->avail_parameters.size() << " parameters" << endl;
           }
 
-          auto inst = def->addInstance(instName, modMap[modInstName]);
+          auto inst = def->addInstance(instName, modMap[coreirSafeName(modInstName)]);
           instMap[cell] = inst;
           
           //auto inst = def->addInstance();
@@ -821,7 +821,7 @@ struct ToCoreIRPass : public Yosys::Pass {
       cout << "\t" << id2cstr(it.first) << endl;
     }
 
-    // Iterate over modules generating parametric modules, until there are no
+    // Iterate over modules generating parametric modules until there are no
     // parametric modules left to generate
     bool foundGen = true;
     while (foundGen) {
@@ -829,7 +829,7 @@ struct ToCoreIRPass : public Yosys::Pass {
 
       for (auto &it : design->modules_) {
 
-        CoreIR::Module* mod = modMap[id2cstr(it.first)];
+        CoreIR::Module* mod = modMap[coreirSafeName(id2cstr(it.first))];
 
         cout << "Parameters for " << mod->getName() << endl;
         for (auto& param : (it.second)->avail_parameters) {
@@ -849,7 +849,7 @@ struct ToCoreIRPass : public Yosys::Pass {
     // Now with all modules added create module definitions
     for (auto &it : design->modules_) {
 
-      CoreIR::Module* mod = modMap[id2cstr(it.first)];
+      CoreIR::Module* mod = modMap[coreirSafeName(id2cstr(it.first))];
 
       cout << "Parameters for " << mod->getName() << endl;
       for (auto& param : (it.second)->avail_parameters) {
