@@ -77,6 +77,10 @@ std::string coreirSafeName(const std::string cellName) {
       instName += "__COLON__";
     } else if (cellName[i] == '.') {
       instName += "__DOT__";
+    } else if (cellName[i] == '\\') {
+      instName += "__BACKSLASH__";
+    } else if (cellName[i] == '=') {
+      instName += "__EQUALS__";
     } else {
       instName += cellName[i];
     }
@@ -86,7 +90,7 @@ std::string coreirSafeName(const std::string cellName) {
   return instName;
 }
 
-void addModule(IdString& modName,
+void addModule(const std::string& modName,
                RTLIL::Module* rmod,
                std::map<string, CoreIR::Module*>& modMap,
                RTLIL::Design * const design,
@@ -139,8 +143,8 @@ void addModule(IdString& modName,
 
       }
 
-      modMap[id2cstr(modName)] =
-        g->newModuleDecl(id2cstr(modName), c->Record(args));
+      modMap[modName] =
+        g->newModuleDecl(modName, c->Record(args));
 
 
 }
@@ -159,7 +163,7 @@ buildModuleMap(RTLIL::Design * const design,
         
       RTLIL::Module* rmod = it.second;
 
-      addModule(it.first, rmod, modMap, design, c, g);
+      addModule(id2cstr(it.first), rmod, modMap, design, c, g);
 
     }
   }
@@ -203,20 +207,6 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
     string cellTp = RTLIL::id2cstr(cell->type);
     string cellName = RTLIL::id2cstr(cell->name);
         
-    //cout << cellName << endl;
-
-    // log("Cell: %s : %s\n",
-    //     RTLIL::id2cstr(cell->name),
-    //     RTLIL::id2cstr(cell->type));
-
-    // for (auto& param : cell->parameters) {
-    //   log("\tParam: %s = %s\n",
-    //       RTLIL::id2cstr(param.first),
-    //       param.second.as_string().c_str());
-    // }
-
-    
-
     if (isRTLILBinop(cellTp)) {
       string opName = cellTp.substr(1, cellTp.size());
       //cout << "opName = " << opName << endl;
@@ -335,19 +325,21 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
           RTLIL::Module* rtmod = rtd->modules_[cell->type];
           cout << "RTMOD = " << id2cstr(rtmod->name) << endl;
 
-          auto modInstName = rtmod->derive(rtmod->design, cell->parameters);
-          cout << "Derived module instance name = " << id2cstr(modInstName) << endl;
+          auto modInstNameR = rtmod->derive(rtmod->design, cell->parameters);
 
-          if (modMap.find(id2cstr(modInstName)) == end(modMap)) {
+          string modInstName = coreirSafeName(id2cstr(modInstNameR));
+          cout << "Derived module instance name = " << modInstName << endl;
+
+          if (modMap.find(modInstName) == end(modMap)) {
             // Add to coreir module map
-            RTLIL::Module* genMod = rtmod->design->modules_[modInstName];
+            RTLIL::Module* genMod = rtmod->design->modules_[modInstNameR];
 
             addModule(modInstName, genMod, modMap, rtd, c, g);
 
             cout << "Generated module " << id2cstr(genMod->name) << " has " << genMod->avail_parameters.size() << " parameters" << endl;
           }
 
-          auto inst = def->addInstance(instName, modMap[id2cstr(modInstName)]);
+          auto inst = def->addInstance(instName, modMap[modInstName]);
           instMap[cell] = inst;
           
           //auto inst = def->addInstance();
