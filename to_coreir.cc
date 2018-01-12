@@ -232,6 +232,7 @@ bool addGeneratedModule(RTLIL::Module* const rmod,
 
         print_cell_info(cell);
 
+        // TODO: Create new module definition
         assert(false);
       } else {
 
