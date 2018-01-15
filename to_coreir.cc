@@ -764,10 +764,8 @@ buildSelectMap(RTLIL::Module* const rmod,
             cast<Select>(def->sel("self")->sel(id2cstr(wire->name)));
 
           if (!isBitType(to->getType())) {
-            //to = to->sel(bit.offset);
             to = to->sel(i);
           }
-                         
 
           assert(to != nullptr);
 
