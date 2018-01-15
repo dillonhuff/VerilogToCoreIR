@@ -640,23 +640,14 @@ buildSelectMap(RTLIL::Module* const rmod,
 
             Cell* driver = sigbit_to_driver_index[bit];
 
-            // if (driver != nullptr) {
-            // cout << "Driver for bit " << bit.data << " of wire " << id2cstr(bit.wire->name) << " = " << id2cstr(driver->name) << " : " << id2cstr(driver->type) << endl;
-            // } else {
-            //   cout << "Driver for bit " << bit.data << " of wire " << id2cstr(bit.wire->name) << " = NULL" << endl;
-            // }
-
             if (sigbit_to_driver_port_index.find(bit) ==
                 end(sigbit_to_driver_port_index)) {
               cout << "Bit " << bit.offset << " for wire " << id2cstr(bit.wire->name) << " has no port?" << endl;
-              //assert(false);
               continue;
             }
 
             string port = sigbit_to_driver_port_index[bit];
-            //cout << "offset = " << bit.offset << endl;
 
-            //cout << "i = " << i << endl;
             // From driver to the current bit
             Select* to = instanceSelect(cell,
                                         id2cstr(conn.first),
@@ -733,14 +724,6 @@ buildSelectMap(RTLIL::Module* const rmod,
             string port = sigbit_to_driver_port_index[bit];
             int offset = sigbit_to_driver_offset[bit];
 
-            // if (driver != nullptr) {
-            //   cout << "Driver cell = " << id2cstr(driver->name) << endl;
-            // } else {
-            //   cout << "Driver is NULL" << endl;
-            // }
-            //cout << "Driver port = " << port << endl;
-
-            //cout << "Wiring up " << id2cstr(wire->name) << ", i = " << i << endl;
             Select* from = nullptr;
             if (driver != nullptr) {
               //cout << "Wiring up driver" << endl;
@@ -773,8 +756,31 @@ buildSelectMap(RTLIL::Module* const rmod,
             //assert(false);
           }
         } else {
+
+
           cout << "Wire is null, data = " << bit.data << endl;
-          assert(false);
+
+          Select* to =
+            cast<Select>(def->sel("self")->sel(id2cstr(wire->name)));
+
+          if (!isBitType(to->getType())) {
+            //to = to->sel(bit.offset);
+            to = to->sel(i);
+          }
+                         
+
+          assert(to != nullptr);
+
+          auto bitConst =
+            def->addInstance(coreirSafeName(to->toString() + "$bit_const_" + to_string(i)),
+                             "corebit.const",
+                             {{"value", CoreIR::Const::make(c, bit.data == 1 ? true : false)}});;
+
+          Select* from = bitConst->sel("out");
+
+          def->connect(from, to);
+
+          //assert(false);
         }
         i++;
       }
