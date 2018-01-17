@@ -258,6 +258,13 @@ bool addGeneratedModule(RTLIL::Module* const rmod,
             addModule(modInstName, genMod, modMap, rtd, c, g);
 
             cout << "Generated module " << id2cstr(genMod->name) << " has " << genMod->avail_parameters.size() << " parameters" << endl;
+
+            cout << "\tAdded generated module " << id2cstr(genMod->name) << endl;
+            cout << "\t$$$$$ Cells in " << id2cstr(genMod->name) << endl;
+            for (auto cell : genMod->cells_) {
+              print_cell_info(cell.second);
+              cout << "----------------------------------------" << endl;
+            }
             return true;
           }
         }
@@ -812,17 +819,19 @@ struct ToCoreIRPass : public Yosys::Pass {
 
     map<string, CoreIR::Module*> modMap = buildModuleMap(design, c, g);
 
+    cout << "---------- Built module map" << endl;
+
     // TODO: Pre-run to generate modules?
     cout << "Modules before  pre-run to generate parametric modules" << endl;
     for (auto& it : design->modules_) {
       string nm = id2cstr(it.first);
 
-      if (nm.size() >= 8) {
-        cout << "Prefix = " << nm.substr(0, 8) << endl;
-        if (nm.substr(0, 8) == "$paramod") {
-          cout << "\tGenerated!!" << endl;
-        }
-      }
+      // if (nm.size() >= 8) {
+      //   cout << "Prefix = " << nm.substr(0, 8) << endl;
+        // if (nm.substr(0, 8) == "$paramod") {
+        //   cout << "\tGenerated!!" << endl;
+        // }
+      //}
       cout << "\t" << id2cstr(it.first) << endl;
     }
 
@@ -882,12 +891,12 @@ struct ToCoreIRPass : public Yosys::Pass {
     for (auto& it : design->modules_) {
       string nm = id2cstr(it.first);
 
-      if (nm.size() >= 8) {
-        cout << "Prefix = " << nm.substr(0, 8) << endl;
-        if (nm.substr(0, 8) == "$paramod") {
-          cout << "\tGenerated!!" << endl;
-        }
-      }
+      // if (nm.size() >= 8) {
+      //   cout << "Prefix = " << nm.substr(0, 8) << endl;
+      //   if (nm.substr(0, 8) == "$paramod") {
+      //     cout << "\tGenerated!!" << endl;
+      //   }
+      // }
       cout << "\t" << id2cstr(it.first) << endl;
     }
     
