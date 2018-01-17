@@ -257,7 +257,7 @@ bool addGeneratedModule(RTLIL::Module* const rmod,
 
             addModule(modInstName, genMod, modMap, rtd, c, g);
 
-            cout << "Generated module " << id2cstr(genMod->name) << " has " << genMod->avail_parameters.size() << " parameters" << endl;
+            cout << "IN ADD generated module " << id2cstr(genMod->name) << " has " << genMod->avail_parameters.size() << " parameters" << endl;
 
             cout << "\tAdded generated module " << id2cstr(genMod->name) << endl;
             cout << "\t$$$$$ Cells in " << id2cstr(genMod->name) << endl;
@@ -857,9 +857,19 @@ struct ToCoreIRPass : public Yosys::Pass {
         RTLIL::Module* rmod = it.second;
 
         foundGen = addGeneratedModule(rmod, modMap, c, g, def);
+
+        if (foundGen == true) {
+          break;
+        }
       }
     }
 
+    cout << "Modules after generating parametric modules" << endl;
+    for (auto& it : design->modules_) {
+      string nm = id2cstr(it.first);
+      cout << "\t" << id2cstr(it.first) << endl;
+    }
+    
     // Now with all modules added create module definitions
     for (auto &it : design->modules_) {
 

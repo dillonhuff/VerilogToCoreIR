@@ -16,7 +16,7 @@ test: to_coreir.so
 
 	yosys -p "proc; opt; to_coreir" -m ./to_coreir.so ./test/samples/test_mult_add/test_mult_add.sv
 
-	yosys -p "proc; memory; pmuxtree; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/mips-cpu/cpu.v
+	#yosys -p "proc; memory; pmuxtree; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/mips-cpu/cpu.v
 
 	yosys -p "proc; pmuxtree; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/genesis_verif/*.v
 
