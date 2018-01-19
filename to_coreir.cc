@@ -222,6 +222,8 @@ bool addGeneratedModule(RTLIL::Module* const rmod,
       continue;
     } else if (cellTp == "$adff") {
       continue;
+    } else if (cellTp == "$mem") {
+      continue;
     } else {
 
       string instName = coreirSafeName(cellName);
@@ -381,13 +383,24 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
 
       instMap[cell] = inst;
 
+    } else if (cellTp == "$mem") {
+
+      int width = getIntParam(cell, "\\WIDTH");
+      int size = getIntParam(cell, "\\SIZE");
+
+      auto inst = def->addInstance(coreirSafeName(cellName),
+                                   "rtlil.memory",
+                                   {{"WIDTH", CoreIR::Const::make(c, width)},
+                                       {"SIZE", CoreIR::Const::make(c, size)}});
+
+      instMap[cell] = inst;
     } else {
 
       string instName = coreirSafeName(cellName);
 
       string cellTypeStr = id2cstr(cell->type);
       if (modMap.find(cellTypeStr) == end(modMap)) {
-        cout << "Unsupported Cell type = " << id2cstr(cell->name) << " : " << id2cstr(cell->type) << ", skipping." << endl;
+        cout << "Unsupported Cell type when building instance map = " << id2cstr(cell->name) << " : " << id2cstr(cell->type) << ", skipping." << endl;
 
         print_cell_info(cell);
 

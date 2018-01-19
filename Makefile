@@ -1,6 +1,7 @@
 COREIR_HOME = /Users/dillon/CppWorkspace/coreir
 
 test: to_coreir.so
+	yosys -p "proc; memory -nomap; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/sram/sram_512w_16b.v
 	yosys -p "proc; memory -nomap; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/simple_bus_array/simple_bus_array.sv
 	yosys -p "proc; memory -nomap; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/bus_array/bus_array.sv
 	yosys -p "to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/generated/generated.v
