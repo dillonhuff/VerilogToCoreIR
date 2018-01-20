@@ -767,7 +767,7 @@ buildSelectMap(RTLIL::Module* const rmod,
               //to = to->sel(bit.offset);
               to = to->sel(i);
             } else {
-              assert(bit.offset == 0);
+              //assert(bit.offset == 0);
             }
 
             def->connect(from, to);
