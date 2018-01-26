@@ -398,7 +398,7 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
 
       string instName = coreirSafeName(cellName);
 
-      string cellTypeStr = id2cstr(cell->type);
+      string cellTypeStr = coreirSafeName(id2cstr(cell->type));
       if (modMap.find(cellTypeStr) == end(modMap)) {
         cout << "Unsupported Cell type when building instance map = " << id2cstr(cell->name) << " : " << id2cstr(cell->type) << ", skipping." << endl;
 
@@ -616,7 +616,6 @@ buildSelectMap(RTLIL::Module* const rmod,
 
         int i = 0;
         for (auto bit : sigmap(conn.second)) {
-          //for (auto bit : conn.second) {
           sigbit_to_driver_index[bit] = cell;
           sigbit_to_driver_port_index[bit] = id2cstr(conn.first);
           sigbit_to_driver_offset[bit] = i;
@@ -656,7 +655,6 @@ buildSelectMap(RTLIL::Module* const rmod,
         for (auto bit : sigmap(conn.second)) {
 
           if (bit.wire != nullptr) {
-            
 
             Cell* driver = sigbit_to_driver_index[bit];
 
@@ -850,32 +848,32 @@ struct ToCoreIRPass : public Yosys::Pass {
 
     // Iterate over modules generating parametric modules until there are no
     // parametric modules left to generate
-    bool foundGen = true;
-    while (foundGen) {
-      foundGen = false;
+    // bool foundGen = true;
+    // while (foundGen) {
+    //   foundGen = false;
 
-      for (auto &it : design->modules_) {
+    //   for (auto &it : design->modules_) {
 
-        CoreIR::Module* mod = modMap[coreirSafeName(id2cstr(it.first))];
+    //     CoreIR::Module* mod = modMap[coreirSafeName(id2cstr(it.first))];
 
-        cout << "Parameters for " << mod->getName() << endl;
-        for (auto& param : (it.second)->avail_parameters) {
-          cout << "\t" << id2cstr(param) << endl;
-        }
+    //     cout << "Parameters for " << mod->getName() << endl;
+    //     for (auto& param : (it.second)->avail_parameters) {
+    //       cout << "\t" << id2cstr(param) << endl;
+    //     }
       
-        assert(mod != nullptr);
+    //     assert(mod != nullptr);
 
-        CoreIR::ModuleDef* def = mod->newModuleDef();
+    //     CoreIR::ModuleDef* def = mod->newModuleDef();
 
-        RTLIL::Module* rmod = it.second;
+    //     RTLIL::Module* rmod = it.second;
 
-        foundGen = addGeneratedModule(rmod, modMap, c, g, def);
+    //     foundGen = addGeneratedModule(rmod, modMap, c, g, def);
 
-        if (foundGen == true) {
-          break;
-        }
-      }
-    }
+    //     if (foundGen == true) {
+    //       break;
+    //     }
+    //   }
+    // }
 
     cout << "Modules after generating parametric modules" << endl;
     for (auto& it : design->modules_) {
