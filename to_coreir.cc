@@ -132,13 +132,17 @@ void addModule(const std::string& modName,
 
         if (wire->port_output) {
 
+          Type* bitTp = c->Bit();
           if (wire->port_input) {
             cout << id2cstr(wire->name) << " is an inout" << endl;
-            assert(false);
-          } else if (wire->width > 1) {
-            args.push_back({id2cstr(wire->name), c->Array(wire->width, c->Bit())});
+            bitTp = c->BitInOut();
+            //assert(false);
+          }
+
+          if (wire->width > 1) {
+            args.push_back({id2cstr(wire->name), bitTp});
           } else {
-            args.push_back({id2cstr(wire->name), c->Bit()});
+            args.push_back({id2cstr(wire->name), bitTp});
           }
 
           continue;
@@ -753,13 +757,12 @@ buildSelectMap(RTLIL::Module* const rmod,
 
             Select* from = nullptr;
             if (driver != nullptr) {
-              //cout << "Wiring up driver" << endl;
-              from = instanceSelect(driver, port, offset /*bit.offset*/, instMap);
+              from = instanceSelect(driver, port, offset, instMap);
             } else {
 
               from = def->sel("self")->sel(port);
               if (!isBitType(from->getType())) {
-                from = from->sel(offset); //from->sel(i); //bit.offset);
+                from = from->sel(offset);
               } else {
                 assert(bit.offset == 0);
               }
@@ -767,14 +770,9 @@ buildSelectMap(RTLIL::Module* const rmod,
         
             assert(from != nullptr);
 
-            //cout << "Wiring to select" << endl;
-            // E.g. self->out0
             Select* to = cast<Select>(def->sel("self")->sel(id2cstr(wire->name)));
             if (!isBitType(to->getType())) {
-              //to = to->sel(bit.offset);
               to = to->sel(i);
-            } else {
-              //assert(bit.offset == 0);
             }
 
             def->connect(from, to);
