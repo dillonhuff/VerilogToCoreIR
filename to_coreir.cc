@@ -132,14 +132,21 @@ void addModule(const std::string& modName,
 
         if (wire->port_output) {
 
-          if (wire->width > 1) {
+          if (wire->port_input) {
+            cout << id2cstr(wire->name) << " is an inout" << endl;
+            assert(false);
+          } else if (wire->width > 1) {
             args.push_back({id2cstr(wire->name), c->Array(wire->width, c->Bit())});
           } else {
             args.push_back({id2cstr(wire->name), c->Bit()});
           }
+
+          continue;
         }
 
         if (wire->port_input) {
+          assert(!wire->port_output);
+
           if (wire->width > 1) {
             args.push_back({id2cstr(wire->name), c->Array(wire->width, c->BitIn())});
           } else {
