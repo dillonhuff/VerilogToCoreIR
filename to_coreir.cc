@@ -510,6 +510,7 @@ CoreIR::Select* instanceSelect(Cell* const cell,
 
   string coreIRPort = coreirPort(cell, portName);
 
+  cout << "Instance sel " << coreIRPort << endl;
   auto port = inst->sel(coreIRPort);
 
   if ((port->getType()->getKind() == Type::TK_Bit) ||
@@ -624,7 +625,6 @@ buildSelectMap(RTLIL::Module* const rmod,
 
   SigMap sigmap(rmod);
 
-  // Build map from 
   dict<SigBit, Cell*> sigbit_to_driver_index;
   dict<SigBit, string> sigbit_to_driver_port_index;
   dict<SigBit, int> sigbit_to_driver_offset;
@@ -669,6 +669,15 @@ buildSelectMap(RTLIL::Module* const rmod,
     }
   }
 
+  // Build inout port to port cast map
+  dict<string, Instance*> inouts_to_in_casts;
+  dict<string, Instance*> inouts_to_out_casts;
+  for (auto wire : rmod->wires()) {
+    if (wire->port_input && wire->port_output) {
+      assert(false);
+    }
+  }
+
   cout << "Adding input to driver connections" << endl;
   // Add connections from inputs to drivers
   for (auto cell : rmod->cells()) {
@@ -706,6 +715,7 @@ buildSelectMap(RTLIL::Module* const rmod,
               from = instanceSelect(driver, port, sigbit_to_driver_offset[bit], /*bit.offset*/ instMap);
             } else {
 
+              cout << "Selecting " << port << " off of select" << endl;
               from = def->sel("self")->sel(port);
               if (!isBitType(from->getType())) {
                 // The sigbit
@@ -753,6 +763,8 @@ buildSelectMap(RTLIL::Module* const rmod,
 
   cout << "Adding output connections to wires" << endl;
   for (auto wire : rmod->wires()) {
+
+    // Handle inout wires separately?
     if (wire->port_output) {
 
       cout << "Wiring up inputs to output port " << id2cstr(wire->name) << endl;
@@ -772,7 +784,9 @@ buildSelectMap(RTLIL::Module* const rmod,
 
             Select* from = nullptr;
             if (driver != nullptr) {
+              cout << "Driver = " << id2cstr(driver->name) << endl;
               from = instanceSelect(driver, port, offset, instMap);
+              cout << "Done selecting" << endl;
             } else {
 
               from = def->sel("self")->sel(port);
