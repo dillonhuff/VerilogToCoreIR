@@ -6,7 +6,8 @@ p2f,
 f2p,
 config_addr,
 config_data,
-tile_id
+tile_id,
+                    little_port
 );
 
   /* verilator lint_off UNUSED */
@@ -18,6 +19,8 @@ tile_id
   input [31:0] config_data;
   input [31:0] config_addr;
   input [15:0] tile_id;
+   input       little_port;
+   
   /* verilator lint_on UNUSED */
 
 
@@ -46,6 +49,6 @@ tile_id
     end
   end
 
-  assign pad = (io_bit==1'b1)?f2p:1'bz;
-  assign p2f = pad;
+   assign pad = (io_bit==1'b1)?f2p:1'bz;
+   assign p2f = pad;
 endmodule

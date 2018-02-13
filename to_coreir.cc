@@ -103,65 +103,71 @@ void addModule(const std::string& modName,
                CoreIR::Context* const c,
                Namespace* const g) {
 
-      cout << "Ports" << endl;
-      for (auto& conn : rmod->ports) {
-        cout << "\t" << id2cstr(conn) << endl;
-      }
+  // cout << "Wires" << endl;
+  // for (auto& w : rmod->wires_) {
+  //   cout << "\t" << id2cstr(w.first) << ", port_id = " << w.second->port_id << endl;
+  // }
+  
+  cout << "Ports" << endl;
+  for (auto& conn : rmod->ports) {
+    cout << "\t" << id2cstr(conn) << endl;
+  }
 
-      cout << "Parameters" << endl;
-      for (auto& param : rmod->avail_parameters) {
-        cout << "\t" << id2cstr(param) << endl;
-      }
+  cout << "Parameters" << endl;
+  for (auto& param : rmod->avail_parameters) {
+    cout << "\t" << id2cstr(param) << endl;
+  }
       
-      cout << "# of Connections in " << id2cstr(rmod->name) << " = " << rmod->connections().size() << endl;
-      for (auto& conn : rmod->connections()) {
-        RTLIL::SigSig s = conn;
-        auto lhs = s.first;
-        auto rhs = s.second;
+  cout << "# of Connections in " << id2cstr(rmod->name) << " = " << rmod->connections().size() << endl;
+  for (auto& conn : rmod->connections()) {
+    RTLIL::SigSig s = conn;
+    auto lhs = s.first;
+    auto rhs = s.second;
 
-        //cout << "\tLHS width = " << lhs.size() << endl;
-        //cout << "\tRHS width = " << lhs.size() << endl;
+    //cout << "\tLHS width = " << lhs.size() << endl;
+    //cout << "\tRHS width = " << lhs.size() << endl;
+  }
+
+  vector<pair<string, Type*> > args;
+
+  //cout << "Wires" << endl;
+  for (auto &wire_iter : rmod->wires_) {
+    RTLIL::Wire *wire = wire_iter.second;
+    //cout << "\t" << id2cstr(wire->name) << ", port in = " << wire->port_input << ", port out = " << wire->port_output << ", width = " << wire->width << endl;
+
+    if (wire->port_output) {
+
+      Type* bitTp = c->Bit();
+      if (wire->port_input) {
+        cout << id2cstr(wire->name) << " is an inout" << endl;
+        //assert(false);
+        bitTp = c->BitInOut();
+        //assert(false);
       }
 
-      vector<pair<string, Type*> > args;
-
-      //cout << "Wires" << endl;
-      for (auto &wire_iter : rmod->wires_) {
-        RTLIL::Wire *wire = wire_iter.second;
-        //cout << "\t" << id2cstr(wire->name) << ", port in = " << wire->port_input << ", port out = " << wire->port_output << ", width = " << wire->width << endl;
-
-        if (wire->port_output) {
-
-          Type* bitTp = c->Bit();
-          if (wire->port_input) {
-            cout << id2cstr(wire->name) << " is an inout" << endl;
-            bitTp = c->BitInOut();
-            //assert(false);
-          }
-
-          if (wire->width > 1) {
-            args.push_back({id2cstr(wire->name), bitTp});
-          } else {
-            args.push_back({id2cstr(wire->name), bitTp});
-          }
-
-          continue;
-        }
-
-        if (wire->port_input) {
-          assert(!wire->port_output);
-
-          if (wire->width > 1) {
-            args.push_back({id2cstr(wire->name), c->Array(wire->width, c->BitIn())});
-          } else {
-            args.push_back({id2cstr(wire->name), c->BitIn()});
-          }
-        }
-
+      if (wire->width > 1) {
+        args.push_back({id2cstr(wire->name), bitTp});
+      } else {
+        args.push_back({id2cstr(wire->name), bitTp});
       }
 
-      modMap[modName] =
-        g->newModuleDecl(modName, c->Record(args));
+      continue;
+    }
+
+    if (wire->port_input) {
+      assert(!wire->port_output);
+
+      if (wire->width > 1) {
+        args.push_back({id2cstr(wire->name), c->Array(wire->width, c->BitIn())});
+      } else {
+        args.push_back({id2cstr(wire->name), c->BitIn()});
+      }
+    }
+
+  }
+
+  modMap[modName] =
+    g->newModuleDecl(modName, c->Record(args));
 
 
 }
@@ -633,15 +639,22 @@ buildSelectMap(RTLIL::Module* const rmod,
           sigbit_to_driver_port_index[bit] = id2cstr(conn.first);
           sigbit_to_driver_offset[bit] = i;
 
-          // if (bit.offset != i) {
-          //   cout << "bit.offset = " << bit.offset << endl;
-          //   cout << "i          = " << i << endl;
-          //   assert(false);
-          // }
-
           i++;
         }
       }
+    }
+  }
+
+  cout << "sigbit_to_driver" << endl;
+  for (auto sigbitR : sigbit_to_driver_index) {
+    SigBit sigbit = sigbitR.first;
+    Cell* driver = sigbitR.second;
+
+    // NOTE: I dont think this should ever happen. Constants are not driven
+    if (sigbit.wire == nullptr) {
+      cout << "data = " << id2cstr(sigbit.wire->name) << " driven by " << driver << endl;
+    } else {
+      cout << id2cstr(sigbit.wire->name) << " [ " << sigbit.offset << " ] " << "driven by " << id2cstr(driver->name) << endl;   
     }
   }
 
@@ -678,6 +691,7 @@ buildSelectMap(RTLIL::Module* const rmod,
             }
 
             string port = sigbit_to_driver_port_index[bit];
+            cout << "port = " << port << endl;
 
             // From driver to the current bit
             Select* to = instanceSelect(cell,
@@ -685,7 +699,7 @@ buildSelectMap(RTLIL::Module* const rmod,
                                         i,
                                         //bit.offset,
                                         instMap);
-            //cout << "to = " << to->toString() << endl;
+            cout << "to = " << to->toString() << endl;
 
             Select* from = nullptr;
             if (driver != nullptr) {
@@ -746,13 +760,14 @@ buildSelectMap(RTLIL::Module* const rmod,
       for (auto bit : sigmap(wire)) {
 
         if (bit.wire != nullptr) {
-          //cout << "Bit wire = " << id2cstr(bit.wire->name) << ", offset = " << bit.offset << endl;
+          cout << "Bit wire = " << id2cstr(bit.wire->name) << ", offset = " << bit.offset << endl;
 
           if (sigbit_to_driver_port_index.find(bit) !=
               end(sigbit_to_driver_port_index)) {
         
             Cell* driver = sigbit_to_driver_index[bit];
             string port = sigbit_to_driver_port_index[bit];
+            cout << "port = " << port << endl;
             int offset = sigbit_to_driver_offset[bit];
 
             Select* from = nullptr;
@@ -818,7 +833,12 @@ buildSelectMap(RTLIL::Module* const rmod,
 struct ToCoreIRPass : public Yosys::Pass {
 	ToCoreIRPass() : Pass("to_coreir") { }
 
-  virtual void execute(std::vector<std::string>, RTLIL::Design *design) {
+  virtual void execute(std::vector<std::string> args, RTLIL::Design *design) {
+
+    cout << "String list" << endl;
+    for (auto str : args) {
+      cout << "\t" << str << endl;
+    }
     // for (auto it : design->modules()) {
 
     //   printModuleInfo(it);
