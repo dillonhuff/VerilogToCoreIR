@@ -146,7 +146,7 @@ void addModule(const std::string& modName,
       }
 
       if (wire->width > 1) {
-        args.push_back({id2cstr(wire->name), bitTp});
+        args.push_back({id2cstr(wire->name), c->Array(wire->width, c->Bit())});
       } else {
         args.push_back({id2cstr(wire->name), bitTp});
       }
@@ -789,6 +789,8 @@ buildSelectMap(RTLIL::Module* const rmod,
             if (!isBitType(to->getType())) {
               to = to->sel(i);
             }
+
+            cout << "Connecting " << from->toString() << " to " << to->toString() << " : " << to->getType()->toString() << endl;
 
             def->connect(from, to);
           } else {
