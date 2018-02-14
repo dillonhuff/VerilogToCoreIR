@@ -414,7 +414,7 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
       int b_signed = getIntParam(cell, "\\B_SIGNED");
       int y_width = getIntParam(cell, "\\Y_WIDTH");
 
-      auto inst = def->addInstance(instName, "rtlil.dffsr",
+      auto inst = def->addInstance(instName, "rtlil.shiftx",
                                    {{"A_WIDTH", CoreIR::Const::make(c, a_width)},
                                        {"B_WIDTH", CoreIR::Const::make(c, b_width)},
                                          {"Y_WIDTH", CoreIR::Const::make(c, y_width)},
