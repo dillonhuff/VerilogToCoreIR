@@ -21,7 +21,7 @@ using namespace CoreIR;
 using namespace std;
 
 #define HIGH_IMPEDANCE_BIT 3
-#define UNKNOWN_BIT 2
+#define UNKNOWN_VALUE_BIT 2
 
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
@@ -755,7 +755,8 @@ buildSelectMap(RTLIL::Module* const rmod,
             cout << "Wire is null, bit state = " << bit.data << endl;
 
             assert((bit.data == 0) || (bit.data == 1) ||
-                   (bit.data == HIGH_IMPEDANCE_BIT));
+                   (bit.data == HIGH_IMPEDANCE_BIT) ||
+                   (bit.data == UNKNOWN_VALUE_BIT));
             // Q: How do I know what offset the bit maps to in a wire if the bit
             // offset field is not set? For now use index variable
             
@@ -774,13 +775,21 @@ buildSelectMap(RTLIL::Module* const rmod,
                                  "corebit.const",
                                  {{"value", CoreIR::Const::make(c, bit.data == 1 ? true : false)}});
               from = const_inst->sel("out");
-            } else {
-              assert(bit.data == HIGH_IMPEDANCE_BIT);
+            } else if (bit.data == HIGH_IMPEDANCE_BIT) {
               const_inst =
                 def->addInstance(coreirSafeName(to->toString() + "_high_impedance_" + to_string(i)),
                                  "rtlil.highImpedanceBit");
 
               from = const_inst->sel("OUT");
+            } else {
+              assert(bit.data == UNKNOWN_VALUE_BIT);
+
+              const_inst =
+                def->addInstance(coreirSafeName(to->toString() + "_unknown_value_" + to_string(i)),
+                                 "rtlil.unknownBit");
+
+              from = const_inst->sel("OUT");
+
             }
 
             assert(from != nullptr);
