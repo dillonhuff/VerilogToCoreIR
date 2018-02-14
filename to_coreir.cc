@@ -405,6 +405,24 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
 
       instMap[cell] = inst;
 
+    } else if (cellTp == "$shiftx") {
+      string instName = coreirSafeName(cellName);
+
+      int a_width = getIntParam(cell, "\\A_WIDTH");
+      int a_signed = getIntParam(cell, "\\A_SIGNED");
+      int b_width = getIntParam(cell, "\\B_WIDTH");
+      int b_signed = getIntParam(cell, "\\B_SIGNED");
+      int y_width = getIntParam(cell, "\\Y_WIDTH");
+
+      auto inst = def->addInstance(instName, "rtlil.dffsr",
+                                   {{"A_WIDTH", CoreIR::Const::make(c, a_width)},
+                                       {"B_WIDTH", CoreIR::Const::make(c, b_width)},
+                                         {"Y_WIDTH", CoreIR::Const::make(c, y_width)},
+                                           {"A_SIGNED", CoreIR::Const::make(c, (bool) a_signed)},
+                                             {"B_SIGNED", CoreIR::Const::make(c, (bool) b_signed)}});
+
+      instMap[cell] = inst;
+
     } else if (cellTp == "$adff") {
 
       string instName = coreirSafeName(cellName);
