@@ -388,6 +388,23 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
 
       instMap[cell] = inst;
 
+    } else if (cellTp == "$dffsr") {
+
+      string instName = coreirSafeName(cellName);
+
+      int width = getIntParam(cell, "\\WIDTH");
+      int clk_polarity = getIntParam(cell, "\\CLK_POLARITY");
+      int clr_polarity = getIntParam(cell, "\\CLR_POLARITY");
+      int set_polarity = getIntParam(cell, "\\SET_POLARITY");
+
+      auto inst = def->addInstance(instName, "rtlil.dffsr",
+                                   {{"WIDTH", CoreIR::Const::make(c, width)},
+                                       {"CLK_POLARITY", CoreIR::Const::make(c, (bool) clk_polarity)},
+                                         {"CLR_POLARITY", CoreIR::Const::make(c, (bool) clr_polarity)},
+                                           {"SET_POLARITY", CoreIR::Const::make(c, (bool) set_polarity)}});
+
+      instMap[cell] = inst;
+
     } else if (cellTp == "$adff") {
 
       string instName = coreirSafeName(cellName);
@@ -697,9 +714,9 @@ buildSelectMap(RTLIL::Module* const rmod,
   cout << "Adding input to driver connections" << endl;
   // Add connections from inputs to drivers
   for (auto cell : rmod->cells()) {
-    cout << "Cell = " << id2cstr(cell->name) << endl;
+    //cout << "Cell = " << id2cstr(cell->name) << endl;
     for (auto conn : cell->connections()) {
-      cout << "Conn = " << id2cstr(conn.first) << endl;
+      //cout << "Conn = " << id2cstr(conn.first) << endl;
       if (cell->input(conn.first)) {
 
         // Not sure if I really need this index variable or if the index is
@@ -752,7 +769,7 @@ buildSelectMap(RTLIL::Module* const rmod,
 
             def->connect(from, to);
           } else {
-            cout << "Wire is null, bit state = " << bit.data << endl;
+            //cout << "Wire is null, bit state = " << bit.data << endl;
 
             assert((bit.data == 0) || (bit.data == 1) ||
                    (bit.data == HIGH_IMPEDANCE_BIT) ||
