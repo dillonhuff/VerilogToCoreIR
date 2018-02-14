@@ -486,7 +486,8 @@ std::string coreirPort(Cell* const cell,
 
 bool isBitType(CoreIR::Type* const tp) {
   if ((tp->getKind() == Type::TK_Bit) ||
-      (tp->getKind() == Type::TK_BitIn)) {
+      (tp->getKind() == Type::TK_BitIn) ||
+      (tp->getKind() == Type::TK_BitInOut)) {
     return true;
   }
 
@@ -674,7 +675,32 @@ buildSelectMap(RTLIL::Module* const rmod,
   dict<string, Instance*> inouts_to_out_casts;
   for (auto wire : rmod->wires()) {
     if (wire->port_input && wire->port_output) {
-      assert(false);
+      auto in_cast = def->addInstance(string(id2cstr(wire->name)) + "_in_cast",
+                                      "rtlil.outArrayToInOutArray",
+                                      {{"WIDTH", CoreIR::Const::make(c, wire->width)}});
+
+      Select* port = def->sel("self")->sel(id2cstr(wire->name));
+      if (isBitType(port->getType())) {
+        def->connect(in_cast->sel("IN")->sel(0), port);
+      } else {
+        assert(false);
+      }
+
+      inouts_to_in_casts[id2cstr(wire->name)] = in_cast;
+
+      auto out_cast = def->addInstance(string(id2cstr(wire->name)) + "_out_cast",
+                                      "rtlil.inOutArrayToOutArray",
+                                      {{"WIDTH", CoreIR::Const::make(c, wire->width)}});
+
+      port = def->sel("self")->sel(id2cstr(wire->name));
+      if (isBitType(port->getType())) {
+        def->connect(in_cast->sel("OUT")->sel(0), port);
+      } else {
+        assert(false);
+      }
+
+      inouts_to_out_casts[id2cstr(wire->name)] = out_cast;
+
     }
   }
 
@@ -774,7 +800,33 @@ buildSelectMap(RTLIL::Module* const rmod,
         if (bit.wire != nullptr) {
           cout << "Bit wire = " << id2cstr(bit.wire->name) << ", offset = " << bit.offset << endl;
 
-          if (sigbit_to_driver_port_index.find(bit) !=
+          if (bit.wire->port_input && bit.wire->port_output) {
+            //assert(false);
+
+            // Maybe move this outside the bit loop
+            Select* to = cast<Select>(def->sel("self")->sel(id2cstr(wire->name)));
+            if (!isBitType(to->getType())) {
+              to = to->sel(i);
+            }
+
+            // Cell* driver = sigbit_to_driver_index[bit];
+            // string port = sigbit_to_driver_port_index[bit];
+            // cout << "port = " << port << endl;
+            // int offset = sigbit_to_driver_offset[bit];
+
+            Select* from = inouts_to_out_casts[id2cstr(bit.wire->name)]->sel("OUT");
+            if (!isBitType(from->getType())) {
+              from = from->sel(0);
+            } else {
+              assert(bit.offset == 0);
+            }
+
+            assert(from != nullptr);
+
+            cout << "Connecting " << from->toString() << " to " << to->toString() << " : " << to->getType()->toString() << endl;
+
+            def->connect(from, to);
+          } else if (sigbit_to_driver_port_index.find(bit) !=
               end(sigbit_to_driver_port_index)) {
         
             Cell* driver = sigbit_to_driver_index[bit];
@@ -799,6 +851,7 @@ buildSelectMap(RTLIL::Module* const rmod,
         
             assert(from != nullptr);
 
+            // Maybe move this outside the bit loop
             Select* to = cast<Select>(def->sel("self")->sel(id2cstr(wire->name)));
             if (!isBitType(to->getType())) {
               to = to->sel(i);
