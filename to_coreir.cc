@@ -552,9 +552,6 @@ CoreIR::Select* instanceSelect(Cell* const cell,
   //cout << "Instance sel " << coreIRPort << endl;
   auto port = inst->sel(coreIRPort);
 
-  // if ((port->getType()->getKind() == Type::TK_Bit) ||
-  //     (port->getType()->getKind() == Type::TK_BitIn)) {
-
   if (isBitType(port->getType())) {
     if (wireOffset != 0) {
 
