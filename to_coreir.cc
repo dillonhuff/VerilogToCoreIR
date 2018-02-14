@@ -20,6 +20,8 @@
 using namespace CoreIR;
 using namespace std;
 
+#define HIGH_IMPEDANCE_BIT 3
+
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
@@ -688,38 +690,15 @@ buildSelectMap(RTLIL::Module* const rmod,
 
       inouts_to_casts[id2cstr(wire->name)] = in_out_cast;
 
-      // auto in_cast = def->addInstance(string(id2cstr(wire->name)) + "_in_cast",
-      //                                 "rtlil.outArrayToInOutArray",
-      //                                 {{"WIDTH", CoreIR::Const::make(c, wire->width)}});
-
-      //Select* port = def->sel("self")->sel(id2cstr(wire->name));
-      // if (isBitType(port->getType())) {
-      //   def->connect(in_out_cast->sel("OUT")->sel(0), port);
-      // } else {
-      //   assert(false);
-      // }
-
-      // port = def->sel("self")->sel(id2cstr(wire->name));
-      // if (isBitType(port->getType())) {
-      //   def->connect(out_cast->sel("IN")->sel(0), port);
-      // } else {
-      //   assert(false);
-      // }
-
-      // inouts_to_out_casts[id2cstr(wire->name)] = out_cast;
-      
-      // auto out_cast = def->addInstance(string(id2cstr(wire->name)) + "_out_cast",
-      //                                 "rtlil.inOutArrayToOutArray",
-      //                                 {{"WIDTH", CoreIR::Const::make(c, wire->width)}});
-
-
     }
   }
 
   cout << "Adding input to driver connections" << endl;
   // Add connections from inputs to drivers
   for (auto cell : rmod->cells()) {
+    cout << "Cell = " << id2cstr(cell->name) << endl;
     for (auto conn : cell->connections()) {
+      cout << "Conn = " << id2cstr(conn.first) << endl;
       if (cell->input(conn.first)) {
 
         // Not sure if I really need this index variable or if the index is
@@ -772,8 +751,10 @@ buildSelectMap(RTLIL::Module* const rmod,
 
             def->connect(from, to);
           } else {
-            //cout << "Wire is null, bit state = " << bit.data << endl;
+            cout << "Wire is null, bit state = " << bit.data << endl;
 
+            assert((bit.data == 0) || (bit.data == 1) ||
+                   (bit.data == HIGH_IMPEDANCE_BIT));
             // Q: How do I know what offset the bit maps to in a wire if the bit
             // offset field is not set? For now use index variable
             
@@ -783,12 +764,22 @@ buildSelectMap(RTLIL::Module* const rmod,
                                         i,
                                         instMap);
 
-            auto bitConst =
-              def->addInstance(coreirSafeName(to->toString() + "$bit_const_" + to_string(i)),
-                               "corebit.const",
-                               {{"value", CoreIR::Const::make(c, bit.data == 1 ? true : false)}});;
+            Instance* const_inst;
+            if ((bit.data == 0) ||
+                (bit.data == 1)) {
+              const_inst =
+                def->addInstance(coreirSafeName(to->toString() + "_bit_const_" + to_string(i)),
+                                 "corebit.const",
+                                 {{"value", CoreIR::Const::make(c, bit.data == 1 ? true : false)}});
+            } else {
+              const_inst =
+                def->addInstance(coreirSafeName(to->toString() + "_high_impedance_" + to_string(i)),
+                                 "rtlil.highImpedanceBit");
 
-            Select* from = bitConst->sel("out");
+              assert(false);
+            }
+
+            Select* from = const_inst->sel("out");
 
             def->connect(from, to);
 
