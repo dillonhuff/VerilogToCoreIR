@@ -511,7 +511,7 @@ CoreIR::Select* instanceSelect(Cell* const cell,
 
   string coreIRPort = coreirPort(cell, portName);
 
-  cout << "Instance sel " << coreIRPort << endl;
+  //cout << "Instance sel " << coreIRPort << endl;
   auto port = inst->sel(coreIRPort);
 
   if ((port->getType()->getKind() == Type::TK_Bit) ||
@@ -578,8 +578,8 @@ void printModuleInfo(RTLIL::Module* const rmod) {
     int i = 0;
     for (auto& bit : sigmap(wire)) {
 
-      cout << "\t\tBit wire = " << id2cstr(bit.wire->name) << endl;
-      cout << "\t\tDrivers" << endl;
+      // cout << "\t\tBit wire = " << id2cstr(bit.wire->name) << endl;
+      // cout << "\t\tDrivers" << endl;
       Cell* driverCell = sigbit_to_driver_index[bit];
 
       if (driverCell != nullptr) {
@@ -653,14 +653,14 @@ buildSelectMap(RTLIL::Module* const rmod,
 
     // NOTE: I dont think this should ever happen. Constants are not driven
     if (sigbit.wire == nullptr) {
-      cout << "data = " << id2cstr(sigbit.wire->name) << " driven by " << driver << endl;
+      //cout << "data = " << id2cstr(sigbit.wire->name) << " driven by " << driver << endl;
     } else {
-      cout << id2cstr(sigbit.wire->name) << " [ " << sigbit.offset << " ] " << "driven by " << id2cstr(driver->name) << endl;   
+      //cout << id2cstr(sigbit.wire->name) << " [ " << sigbit.offset << " ] " << "driven by " << id2cstr(driver->name) << endl;
     }
   }
 
   for (auto wire : rmod->wires()) {
-    if (wire->port_input) {
+    if (wire->port_input && !wire->port_output) {
       int i = 0;
       for (auto bit : sigmap(wire)) {
         sigbit_to_driver_port_index[bit] = id2cstr(wire->name);
@@ -738,7 +738,7 @@ buildSelectMap(RTLIL::Module* const rmod,
             }
 
             string port = sigbit_to_driver_port_index[bit];
-            cout << "port = " << port << endl;
+            //cout << "port = " << port << endl;
 
             // From driver to the current bit
             Select* to = instanceSelect(cell,
@@ -746,14 +746,14 @@ buildSelectMap(RTLIL::Module* const rmod,
                                         i,
                                         //bit.offset,
                                         instMap);
-            cout << "to = " << to->toString() << endl;
+            //cout << "to = " << to->toString() << endl;
 
             Select* from = nullptr;
             if (driver != nullptr) {
               from = instanceSelect(driver, port, sigbit_to_driver_offset[bit], /*bit.offset*/ instMap);
             } else {
 
-              cout << "Selecting " << port << " off of select" << endl;
+              //cout << "Selecting " << port << " off of select" << endl;
               from = def->sel("self")->sel(port);
               if (!isBitType(from->getType())) {
                 // The sigbit
@@ -802,9 +802,60 @@ buildSelectMap(RTLIL::Module* const rmod,
   cout << "Adding output connections to wires" << endl;
   for (auto wire : rmod->wires()) {
 
-    // Handle inout wires separately?
+    // // Handle inout wires separately?
     if (wire->port_output && wire->port_input) {
-      continue;
+
+      Instance* cast = inouts_to_casts[id2cstr(wire->name)];
+      assert(cast != nullptr);
+
+      int i = 0;
+      for (auto bit : sigmap(wire)) {
+        cout << "Bit wire = " << id2cstr(bit.wire->name) << ", offset = " << bit.offset << endl;
+        assert(bit.wire != nullptr);
+
+        assert(sigbit_to_driver_port_index.find(bit) !=
+               end(sigbit_to_driver_port_index));
+        
+        Cell* driver = sigbit_to_driver_index[bit];
+
+        assert(driver != nullptr);
+        cout << "driver = " << id2cstr(driver->name) << endl;
+        string port = sigbit_to_driver_port_index[bit];
+        cout << "port = " << port << endl;
+
+        int offset = sigbit_to_driver_offset[bit];
+
+        Select* from = nullptr;
+        if (driver != nullptr) {
+          cout << "Driver = " << id2cstr(driver->name) << endl;
+          from = instanceSelect(driver, port, offset, instMap);
+          cout << "Done selecting" << endl;
+        } else {
+
+          from = def->sel("self")->sel(port);
+          if (!isBitType(from->getType())) {
+            from = from->sel(offset);
+          } else {
+            assert(bit.offset == 0);
+          }
+        }
+        
+        assert(from != nullptr);
+
+        // Maybe move this outside the bit loop
+        Select* to = cast->sel("IN_PORT"); //cast<Select>(def->sel("self")->sel(id2cstr(wire->name)));
+        if (!isBitType(to->getType())) {
+          to = to->sel(i);
+        }
+
+        //cout << "Connecting " << from->toString() << " to " << to->toString() << " : " << to->getType()->toString() << endl;
+
+        def->connect(from, to);
+        
+      }
+
+      //assert(false);
+
     } else if (wire->port_output) {
 
       cout << "Wiring up inputs to output port " << id2cstr(wire->name) << endl;
@@ -812,21 +863,14 @@ buildSelectMap(RTLIL::Module* const rmod,
       for (auto bit : sigmap(wire)) {
 
         if (bit.wire != nullptr) {
-          cout << "Bit wire = " << id2cstr(bit.wire->name) << ", offset = " << bit.offset << endl;
+          //cout << "Bit wire = " << id2cstr(bit.wire->name) << ", offset = " << bit.offset << endl;
 
           if (bit.wire->port_input && bit.wire->port_output) {
-            //assert(false);
-
             // Maybe move this outside the bit loop
             Select* to = cast<Select>(def->sel("self")->sel(id2cstr(wire->name)));
             if (!isBitType(to->getType())) {
               to = to->sel(i);
             }
-
-            // Cell* driver = sigbit_to_driver_index[bit];
-            // string port = sigbit_to_driver_port_index[bit];
-            // cout << "port = " << port << endl;
-            // int offset = sigbit_to_driver_offset[bit];
 
             Select* from = inouts_to_casts[id2cstr(bit.wire->name)]->sel("OUT_PORT");
             if (!isBitType(from->getType())) {
@@ -837,7 +881,7 @@ buildSelectMap(RTLIL::Module* const rmod,
 
             assert(from != nullptr);
 
-            cout << "InOut Connecting " << from->toString() << " to " << to->toString() << " : " << to->getType()->toString() << endl;
+            //cout << "InOut Connecting " << from->toString() << " to " << to->toString() << " : " << to->getType()->toString() << endl;
 
             def->connect(from, to);
           } else if (sigbit_to_driver_port_index.find(bit) !=
@@ -850,9 +894,9 @@ buildSelectMap(RTLIL::Module* const rmod,
 
             Select* from = nullptr;
             if (driver != nullptr) {
-              cout << "Driver = " << id2cstr(driver->name) << endl;
+              //cout << "Driver = " << id2cstr(driver->name) << endl;
               from = instanceSelect(driver, port, offset, instMap);
-              cout << "Done selecting" << endl;
+              //cout << "Done selecting" << endl;
             } else {
 
               from = def->sel("self")->sel(port);
