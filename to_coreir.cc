@@ -21,6 +21,7 @@ using namespace CoreIR;
 using namespace std;
 
 #define HIGH_IMPEDANCE_BIT 3
+#define UNKNOWN_BIT 2
 
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
@@ -765,21 +766,24 @@ buildSelectMap(RTLIL::Module* const rmod,
                                         instMap);
 
             Instance* const_inst;
+            Select* from = nullptr;
             if ((bit.data == 0) ||
                 (bit.data == 1)) {
               const_inst =
                 def->addInstance(coreirSafeName(to->toString() + "_bit_const_" + to_string(i)),
                                  "corebit.const",
                                  {{"value", CoreIR::Const::make(c, bit.data == 1 ? true : false)}});
+              from = const_inst->sel("out");
             } else {
+              assert(bit.data == HIGH_IMPEDANCE_BIT);
               const_inst =
                 def->addInstance(coreirSafeName(to->toString() + "_high_impedance_" + to_string(i)),
                                  "rtlil.highImpedanceBit");
 
-              assert(false);
+              from = const_inst->sel("OUT");
             }
 
-            Select* from = const_inst->sel("out");
+            assert(from != nullptr);
 
             def->connect(from, to);
 
