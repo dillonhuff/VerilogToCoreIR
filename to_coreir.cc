@@ -671,35 +671,47 @@ buildSelectMap(RTLIL::Module* const rmod,
   }
 
   // Build inout port to port cast map
-  dict<string, Instance*> inouts_to_in_casts;
-  dict<string, Instance*> inouts_to_out_casts;
+  dict<string, Instance*> inouts_to_casts;
+  //dict<string, Instance*> inouts_to_out_casts;
   for (auto wire : rmod->wires()) {
     if (wire->port_input && wire->port_output) {
-      auto in_cast = def->addInstance(string(id2cstr(wire->name)) + "_in_cast",
-                                      "rtlil.outArrayToInOutArray",
-                                      {{"WIDTH", CoreIR::Const::make(c, wire->width)}});
 
+      auto in_out_cast = def->addInstance(string(id2cstr(wire->name)) + "_in_cast",
+                                          "rtlil.padIO",
+                                          {{"WIDTH", CoreIR::Const::make(c, wire->width)}});
       Select* port = def->sel("self")->sel(id2cstr(wire->name));
       if (isBitType(port->getType())) {
-        def->connect(in_cast->sel("IN")->sel(0), port);
+        def->connect(in_out_cast->sel("INOUT_PORT")->sel(0), port);
       } else {
         assert(false);
       }
 
-      inouts_to_in_casts[id2cstr(wire->name)] = in_cast;
+      inouts_to_casts[id2cstr(wire->name)] = in_out_cast;
 
-      auto out_cast = def->addInstance(string(id2cstr(wire->name)) + "_out_cast",
-                                      "rtlil.inOutArrayToOutArray",
-                                      {{"WIDTH", CoreIR::Const::make(c, wire->width)}});
+      // auto in_cast = def->addInstance(string(id2cstr(wire->name)) + "_in_cast",
+      //                                 "rtlil.outArrayToInOutArray",
+      //                                 {{"WIDTH", CoreIR::Const::make(c, wire->width)}});
 
-      port = def->sel("self")->sel(id2cstr(wire->name));
-      if (isBitType(port->getType())) {
-        def->connect(in_cast->sel("OUT")->sel(0), port);
-      } else {
-        assert(false);
-      }
+      //Select* port = def->sel("self")->sel(id2cstr(wire->name));
+      // if (isBitType(port->getType())) {
+      //   def->connect(in_out_cast->sel("OUT")->sel(0), port);
+      // } else {
+      //   assert(false);
+      // }
 
-      inouts_to_out_casts[id2cstr(wire->name)] = out_cast;
+      // port = def->sel("self")->sel(id2cstr(wire->name));
+      // if (isBitType(port->getType())) {
+      //   def->connect(out_cast->sel("IN")->sel(0), port);
+      // } else {
+      //   assert(false);
+      // }
+
+      // inouts_to_out_casts[id2cstr(wire->name)] = out_cast;
+      
+      // auto out_cast = def->addInstance(string(id2cstr(wire->name)) + "_out_cast",
+      //                                 "rtlil.inOutArrayToOutArray",
+      //                                 {{"WIDTH", CoreIR::Const::make(c, wire->width)}});
+
 
     }
   }
@@ -791,7 +803,9 @@ buildSelectMap(RTLIL::Module* const rmod,
   for (auto wire : rmod->wires()) {
 
     // Handle inout wires separately?
-    if (wire->port_output) {
+    if (wire->port_output && wire->port_input) {
+      continue;
+    } else if (wire->port_output) {
 
       cout << "Wiring up inputs to output port " << id2cstr(wire->name) << endl;
       int i = 0;
@@ -814,7 +828,7 @@ buildSelectMap(RTLIL::Module* const rmod,
             // cout << "port = " << port << endl;
             // int offset = sigbit_to_driver_offset[bit];
 
-            Select* from = inouts_to_out_casts[id2cstr(bit.wire->name)]->sel("OUT");
+            Select* from = inouts_to_casts[id2cstr(bit.wire->name)]->sel("OUT_PORT");
             if (!isBitType(from->getType())) {
               from = from->sel(0);
             } else {
@@ -823,7 +837,7 @@ buildSelectMap(RTLIL::Module* const rmod,
 
             assert(from != nullptr);
 
-            cout << "Connecting " << from->toString() << " to " << to->toString() << " : " << to->getType()->toString() << endl;
+            cout << "InOut Connecting " << from->toString() << " to " << to->toString() << " : " << to->getType()->toString() << endl;
 
             def->connect(from, to);
           } else if (sigbit_to_driver_port_index.find(bit) !=
