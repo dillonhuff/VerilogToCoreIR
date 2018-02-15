@@ -739,14 +739,27 @@ buildSelectMap(RTLIL::Module* const rmod,
         if (cell->output(conn.first)) {
           cout << "Cell " << id2cstr(cell->name) << "." << id2cstr(conn.first) << " is an io port" << endl;
 
+          int i = 0;
           for (auto bit : sigmap(conn.second)) {
             assert(bit.wire != nullptr);
             cout << "bit.wire " << bit.offset << " = " << id2cstr(bit.wire->name) << endl;
             assert(bit.wire->port_input && bit.wire->port_output);
 
-          }
+            Instance* port = inouts_to_casts[id2cstr(bit.wire->name)];
+            assert(port != nullptr);
+            Select* p = port->sel("INOUT_DRIVER_PORT")->sel(bit.offset);
 
-          assert(false);
+            cout << "Connecting to " << p->toString() << endl;
+
+            // From driver to the current bit
+            Select* to = instanceSelect(cell,
+                                        id2cstr(conn.first),
+                                        i,
+                                        instMap);
+            cout << "to = " << to->toString() << endl;
+            
+            i++;
+          }
         } else {
           // Not sure if I really need this index variable or if the index is
           // stored somewhere else
