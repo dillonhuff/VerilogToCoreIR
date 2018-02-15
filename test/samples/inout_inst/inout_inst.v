@@ -21,14 +21,14 @@ endmodule
 
 module user(
             input clk, 
-            inout pad,
+            inout in_pad,
             output p2f,
             input f2p,
             input mode
             );
 
    io1bit_unq1 iobit(.clk(clk),
-                     .pad(pad),
+                     .pad(in_pad),
                      .p2f(p2f),
                      .f2p(f2p),
                      .mode(mode));

@@ -738,102 +738,112 @@ buildSelectMap(RTLIL::Module* const rmod,
 
         if (cell->output(conn.first)) {
           cout << "Cell " << id2cstr(cell->name) << "." << id2cstr(conn.first) << " is an io port" << endl;
-        }
-        // Not sure if I really need this index variable or if the index is
-        // stored somewhere else
-        int i = 0;
-        for (auto bit : sigmap(conn.second)) {
 
-          if (bit.wire != nullptr) {
-
-            Cell* driver = sigbit_to_driver_index[bit];
-
-            if (sigbit_to_driver_port_index.find(bit) ==
-                end(sigbit_to_driver_port_index)) {
-              cout << "Bit " << bit.offset << " for wire " << id2cstr(bit.wire->name) << " has no port?" << endl;
-              continue;
-            }
-
-            string port = sigbit_to_driver_port_index[bit];
-            //cout << "port = " << port << endl;
-
-            // From driver to the current bit
-            Select* to = instanceSelect(cell,
-                                        id2cstr(conn.first),
-                                        i,
-                                        instMap);
-            cout << "to = " << to->toString() << endl;
-
-            Select* from = nullptr;
-            if (driver != nullptr) {
-              from = instanceSelect(driver, port, sigbit_to_driver_offset[bit], /*bit.offset*/ instMap);
-            } else {
-
-              //cout << "Selecting " << port << " off of select" << endl;
-              from = def->sel("self")->sel(port);
-              if (!isBitType(from->getType())) {
-                // The sigbit
-                assert(sigbit_to_driver_offset.find(bit) !=
-                       end(sigbit_to_driver_offset));
-
-                from = from->sel(sigbit_to_driver_offset[bit]);
-              } else {
-                assert(bit.offset == 0);
-              }
-            }
-
-            assert(from != nullptr);
-
-            cout << "from = " << from->toString() << endl;
-            cout << "Connecting " << from->toString() << " to " << to->toString() << endl;
-            def->connect(from, to);
-          } else {
-            //cout << "Wire is null, bit state = " << bit.data << endl;
-
-            assert((bit.data == 0) || (bit.data == 1) ||
-                   (bit.data == HIGH_IMPEDANCE_BIT) ||
-                   (bit.data == UNKNOWN_VALUE_BIT));
-            // Q: How do I know what offset the bit maps to in a wire if the bit
-            // offset field is not set? For now use index variable
-            
-            // From driver to the current bit
-            Select* to = instanceSelect(cell,
-                                        id2cstr(conn.first),
-                                        i,
-                                        instMap);
-
-            Instance* const_inst;
-            Select* from = nullptr;
-            if ((bit.data == 0) ||
-                (bit.data == 1)) {
-              const_inst =
-                def->addInstance(coreirSafeName(to->toString() + "_bit_const_" + to_string(i)),
-                                 "corebit.const",
-                                 {{"value", CoreIR::Const::make(c, bit.data == 1 ? true : false)}});
-              from = const_inst->sel("out");
-            } else if (bit.data == HIGH_IMPEDANCE_BIT) {
-              const_inst =
-                def->addInstance(coreirSafeName(to->toString() + "_high_impedance_" + to_string(i)),
-                                 "rtlil.highImpedanceBit");
-
-              from = const_inst->sel("OUT");
-            } else {
-              assert(bit.data == UNKNOWN_VALUE_BIT);
-
-              const_inst =
-                def->addInstance(coreirSafeName(to->toString() + "_unknown_value_" + to_string(i)),
-                                 "rtlil.unknownBit");
-
-              from = const_inst->sel("OUT");
-
-            }
-
-            assert(from != nullptr);
-
-            def->connect(from, to);
+          for (auto bit : sigmap(conn.second)) {
+            assert(bit.wire != nullptr);
+            cout << "bit.wire " << bit.offset << " = " << id2cstr(bit.wire->name) << endl;
+            assert(bit.wire->port_input && bit.wire->port_output);
 
           }
-          i++;
+
+          assert(false);
+        } else {
+          // Not sure if I really need this index variable or if the index is
+          // stored somewhere else
+          int i = 0;
+          for (auto bit : sigmap(conn.second)) {
+
+            if (bit.wire != nullptr) {
+
+              Cell* driver = sigbit_to_driver_index[bit];
+
+              if (sigbit_to_driver_port_index.find(bit) ==
+                  end(sigbit_to_driver_port_index)) {
+                cout << "Bit " << bit.offset << " for wire " << id2cstr(bit.wire->name) << " has no port?" << endl;
+                continue;
+              }
+
+              string port = sigbit_to_driver_port_index[bit];
+              //cout << "port = " << port << endl;
+
+              // From driver to the current bit
+              Select* to = instanceSelect(cell,
+                                          id2cstr(conn.first),
+                                          i,
+                                          instMap);
+              cout << "to = " << to->toString() << endl;
+
+              Select* from = nullptr;
+              if (driver != nullptr) {
+                from = instanceSelect(driver, port, sigbit_to_driver_offset[bit], /*bit.offset*/ instMap);
+              } else {
+
+                //cout << "Selecting " << port << " off of select" << endl;
+                from = def->sel("self")->sel(port);
+                if (!isBitType(from->getType())) {
+                  // The sigbit
+                  assert(sigbit_to_driver_offset.find(bit) !=
+                         end(sigbit_to_driver_offset));
+
+                  from = from->sel(sigbit_to_driver_offset[bit]);
+                } else {
+                  assert(bit.offset == 0);
+                }
+              }
+
+              assert(from != nullptr);
+
+              cout << "from = " << from->toString() << endl;
+              cout << "Connecting " << from->toString() << " to " << to->toString() << endl;
+              def->connect(from, to);
+            } else {
+              //cout << "Wire is null, bit state = " << bit.data << endl;
+
+              assert((bit.data == 0) || (bit.data == 1) ||
+                     (bit.data == HIGH_IMPEDANCE_BIT) ||
+                     (bit.data == UNKNOWN_VALUE_BIT));
+              // Q: How do I know what offset the bit maps to in a wire if the bit
+              // offset field is not set? For now use index variable
+            
+              // From driver to the current bit
+              Select* to = instanceSelect(cell,
+                                          id2cstr(conn.first),
+                                          i,
+                                          instMap);
+
+              Instance* const_inst;
+              Select* from = nullptr;
+              if ((bit.data == 0) ||
+                  (bit.data == 1)) {
+                const_inst =
+                  def->addInstance(coreirSafeName(to->toString() + "_bit_const_" + to_string(i)),
+                                   "corebit.const",
+                                   {{"value", CoreIR::Const::make(c, bit.data == 1 ? true : false)}});
+                from = const_inst->sel("out");
+              } else if (bit.data == HIGH_IMPEDANCE_BIT) {
+                const_inst =
+                  def->addInstance(coreirSafeName(to->toString() + "_high_impedance_" + to_string(i)),
+                                   "rtlil.highImpedanceBit");
+
+                from = const_inst->sel("OUT");
+              } else {
+                assert(bit.data == UNKNOWN_VALUE_BIT);
+
+                const_inst =
+                  def->addInstance(coreirSafeName(to->toString() + "_unknown_value_" + to_string(i)),
+                                   "rtlil.unknownBit");
+
+                from = const_inst->sel("OUT");
+
+              }
+
+              assert(from != nullptr);
+
+              def->connect(from, to);
+
+            }
+            i++;
+          }
         }
       }
     }
