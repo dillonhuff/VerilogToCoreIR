@@ -736,6 +736,9 @@ buildSelectMap(RTLIL::Module* const rmod,
       //cout << "Conn = " << id2cstr(conn.first) << endl;
       if (cell->input(conn.first)) {
 
+        if (cell->output(conn.first)) {
+          cout << "Cell " << id2cstr(cell->name) << "." << id2cstr(conn.first) << " is an io port" << endl;
+        }
         // Not sure if I really need this index variable or if the index is
         // stored somewhere else
         int i = 0;
