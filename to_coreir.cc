@@ -737,26 +737,26 @@ buildSelectMap(RTLIL::Module* const rmod,
       if (cell->input(conn.first)) {
 
         if (cell->output(conn.first)) {
-          cout << "Cell " << id2cstr(cell->name) << "." << id2cstr(conn.first) << " is an io port" << endl;
+          //cout << "Cell " << id2cstr(cell->name) << "." << id2cstr(conn.first) << " is an io port" << endl;
 
           int i = 0;
           for (auto bit : sigmap(conn.second)) {
             assert(bit.wire != nullptr);
-            cout << "bit.wire " << bit.offset << " = " << id2cstr(bit.wire->name) << endl;
+            //cout << "bit.wire " << bit.offset << " = " << id2cstr(bit.wire->name) << endl;
             assert(bit.wire->port_input && bit.wire->port_output);
 
             Instance* port = inouts_to_casts[id2cstr(bit.wire->name)];
             assert(port != nullptr);
             Select* p = port->sel("INOUT_DRIVER_PORT")->sel(bit.offset);
 
-            cout << "Connecting to " << p->toString() << endl;
+            //cout << "Connecting to " << p->toString() << endl;
 
             // From driver to the current bit
             Select* to = instanceSelect(cell,
                                         id2cstr(conn.first),
                                         i,
                                         instMap);
-            cout << "to = " << to->toString() << endl;
+            //cout << "to = " << to->toString() << endl;
             
             i++;
           }
@@ -784,7 +784,7 @@ buildSelectMap(RTLIL::Module* const rmod,
                                           id2cstr(conn.first),
                                           i,
                                           instMap);
-              cout << "to = " << to->toString() << endl;
+              //cout << "to = " << to->toString() << endl;
 
               Select* from = nullptr;
               if (driver != nullptr) {
@@ -806,8 +806,8 @@ buildSelectMap(RTLIL::Module* const rmod,
 
               assert(from != nullptr);
 
-              cout << "from = " << from->toString() << endl;
-              cout << "Connecting " << from->toString() << " to " << to->toString() << endl;
+              // cout << "from = " << from->toString() << endl;
+              // cout << "Connecting " << from->toString() << " to " << to->toString() <<                endl;
               def->connect(from, to);
             } else {
               //cout << "Wire is null, bit state = " << bit.data << endl;
@@ -873,8 +873,16 @@ buildSelectMap(RTLIL::Module* const rmod,
 
       int i = 0;
       for (auto bit : sigmap(wire)) {
-        cout << "Bit wire = " << id2cstr(bit.wire->name) << ", offset = " << bit.offset << endl;
+        //cout << "Bit wire = " << id2cstr(bit.wire->name) << ", offset = " << bit.offset << endl;
         assert(bit.wire != nullptr);
+
+        if (bit.wire->port_input && bit.wire->port_output) {
+          //cout << "Connecting 2 inout ports" << endl;
+
+          // This connection has already been wired up unless it is a connection
+          continue;
+          //assert(false);
+        }
 
         assert(sigbit_to_driver_port_index.find(bit) !=
                end(sigbit_to_driver_port_index));
@@ -882,17 +890,17 @@ buildSelectMap(RTLIL::Module* const rmod,
         Cell* driver = sigbit_to_driver_index[bit];
 
         assert(driver != nullptr);
-        cout << "driver = " << id2cstr(driver->name) << endl;
+        //cout << "driver = " << id2cstr(driver->name) << endl;
         string port = sigbit_to_driver_port_index[bit];
-        cout << "port = " << port << endl;
+        //cout << "port = " << port << endl;
 
         int offset = sigbit_to_driver_offset[bit];
 
         Select* from = nullptr;
         if (driver != nullptr) {
-          cout << "Driver = " << id2cstr(driver->name) << endl;
+          //cout << "Driver = " << id2cstr(driver->name) << endl;
           from = instanceSelect(driver, port, offset, instMap);
-          cout << "Done selecting" << endl;
+          //cout << "Done selecting" << endl;
         } else {
 
           from = def->sel("self")->sel(port);
