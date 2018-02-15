@@ -1,10 +1,11 @@
 COREIR_HOME = /Users/dillon/CppWorkspace/coreir
 
 test: to_coreir.so
+	yosys -p "proc; memory; pmuxtree; to_coreir" -m ./to_coreir.so ./test/samples/picorv/picorv32.v
+	clang++ -std=c++11 picorv_testbench.cpp -lcoreir -lcoreir-rtlil -L/Users/dillon/CppWorkspace/coreir/lib/
 	yosys -p "proc; memory; pmuxtree; to_coreir" -m ./to_coreir.so ./test/samples/inout_inst/inout_inst.v
 	yosys -p "proc; memory; pmuxtree; to_coreir" -m ./to_coreir.so ./test/samples/cb_unq1/cb_unq1.v
 	yosys -p "proc; memory; pmuxtree; to_coreir" -m ./to_coreir.so ./test/samples/io1bit/io1bit.v
-	yosys -p "proc; memory; pmuxtree; to_coreir" -m ./to_coreir.so ./test/samples/picorv/picorv32.v
 	yosys -p "proc; memory -nomap; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/sram/sram_512w_16b.v
 	yosys -p "proc; memory -nomap; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/simple_bus_array/simple_bus_array.sv
 	yosys -p "proc; memory -nomap; to_coreir" -ql test1.log -m ./to_coreir.so ./test/samples/bus_array/bus_array.sv

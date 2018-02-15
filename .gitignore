@@ -10,3 +10,4 @@ bit_vector.h
 to_coreir.so.dSYM/
 stubnets.so.dSYM/
 *.json
+a.out

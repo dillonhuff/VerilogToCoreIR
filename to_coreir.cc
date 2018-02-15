@@ -731,9 +731,9 @@ buildSelectMap(RTLIL::Module* const rmod,
   cout << "Adding input to driver connections" << endl;
   // Add connections from inputs to drivers
   for (auto cell : rmod->cells()) {
-    cout << "Cell = " << id2cstr(cell->name) << endl;
+    //cout << "Cell = " << id2cstr(cell->name) << endl;
     for (auto conn : cell->connections()) {
-      cout << "Conn = " << id2cstr(conn.first) << endl;
+      //cout << "Conn = " << id2cstr(conn.first) << endl;
       if (cell->input(conn.first)) {
 
         // Not sure if I really need this index variable or if the index is
@@ -752,7 +752,7 @@ buildSelectMap(RTLIL::Module* const rmod,
             }
 
             string port = sigbit_to_driver_port_index[bit];
-            cout << "port = " << port << endl;
+            //cout << "port = " << port << endl;
 
             // From driver to the current bit
             Select* to = instanceSelect(cell,
@@ -760,7 +760,7 @@ buildSelectMap(RTLIL::Module* const rmod,
                                         i,
                                         //bit.offset,
                                         instMap);
-            cout << "to = " << to->toString() << endl;
+            //cout << "to = " << to->toString() << endl;
 
             Select* from = nullptr;
             if (driver != nullptr) {
@@ -782,7 +782,7 @@ buildSelectMap(RTLIL::Module* const rmod,
 
             assert(from != nullptr);
 
-            cout << "from = " << from->toString() << endl;
+            //cout << "from = " << from->toString() << endl;
 
             def->connect(from, to);
           } else {
