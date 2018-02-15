@@ -758,9 +758,8 @@ buildSelectMap(RTLIL::Module* const rmod,
             Select* to = instanceSelect(cell,
                                         id2cstr(conn.first),
                                         i,
-                                        //bit.offset,
                                         instMap);
-            //cout << "to = " << to->toString() << endl;
+            cout << "to = " << to->toString() << endl;
 
             Select* from = nullptr;
             if (driver != nullptr) {
@@ -782,8 +781,8 @@ buildSelectMap(RTLIL::Module* const rmod,
 
             assert(from != nullptr);
 
-            //cout << "from = " << from->toString() << endl;
-
+            cout << "from = " << from->toString() << endl;
+            cout << "Connecting " << from->toString() << " to " << to->toString() << endl;
             def->connect(from, to);
           } else {
             //cout << "Wire is null, bit state = " << bit.data << endl;

@@ -281,11 +281,7 @@ void simulateState(const std::string& fileName,
 int main() {
   string fileName = "picorv32.json";
 
-  //"__DOLLAR__paramod__DOLLAR__4d2dfdcc1db1a7362453fb449ccdda75bb1b39f9__BACKSLASH__picorv32.json";
   string topMod = "picorv32";
-
-  //"__DOLLAR__paramod__DOLLAR__4d2dfdcc1db1a7362453fb449ccdda75bb1b39f9__BACKSLASH__picorv32";
-  //processTop(fileName, topMod);
 
   simulateState("picorv32.json", topMod);
 }
