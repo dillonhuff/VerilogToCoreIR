@@ -1038,6 +1038,34 @@ buildSelectMap(RTLIL::Module* const rmod,
 
 }
 
+void removeRTLILTristate(CoreIR::ModuleDef* def) {
+
+  bool removedPad = true;
+  while (removedPad) {
+    removedPad = false;
+
+    for (auto instR : def->getInstances()) {
+      Instance* inst = instR.second;
+      if (getQualifiedOpName(*inst) == "rtlil.padIO") {
+
+        if ((getReceiverConnections(inst->sel("OUT_PORT")).size() == 0) &&
+            (getSourceConnections(inst->sel("IN_PORT")).size() == 0)) {
+
+          Instance* pt = addPassthrough(inst, "_inline_tristate_PT");
+
+          //cout << "pt type = " << pt->getType()->toString() << endl;
+          def->disconnect(inst);
+
+          def->connect(pt->sel("in")->sel("INOUT_PORT"),
+                       pt->sel("in")->sel("INOUT_DRIVER_PORT"));
+          def->removeInstance(inst);
+          inlineInstance(pt);
+          //assert(false);
+        }
+      }
+    }
+  }
+}
 
 struct ToCoreIRPass : public Yosys::Pass {
 	ToCoreIRPass() : Pass("to_coreir") { }
@@ -1048,13 +1076,6 @@ struct ToCoreIRPass : public Yosys::Pass {
     for (auto str : args) {
       cout << "\t" << str << endl;
     }
-    // for (auto it : design->modules()) {
-
-    //   printModuleInfo(it);
-
-    // }
-
-    // return;
 
     Context* c = newContext();
     log_header(design, "Executing TOCOREIR pass (find stub nets).\n");
@@ -1073,43 +1094,8 @@ struct ToCoreIRPass : public Yosys::Pass {
     for (auto& it : design->modules_) {
       string nm = id2cstr(it.first);
 
-      // if (nm.size() >= 8) {
-      //   cout << "Prefix = " << nm.substr(0, 8) << endl;
-        // if (nm.substr(0, 8) == "$paramod") {
-        //   cout << "\tGenerated!!" << endl;
-        // }
-      //}
       cout << "\t" << id2cstr(it.first) << endl;
     }
-
-    // Iterate over modules generating parametric modules until there are no
-    // parametric modules left to generate
-    // bool foundGen = true;
-    // while (foundGen) {
-    //   foundGen = false;
-
-    //   for (auto &it : design->modules_) {
-
-    //     CoreIR::Module* mod = modMap[coreirSafeName(id2cstr(it.first))];
-
-    //     cout << "Parameters for " << mod->getName() << endl;
-    //     for (auto& param : (it.second)->avail_parameters) {
-    //       cout << "\t" << id2cstr(param) << endl;
-    //     }
-      
-    //     assert(mod != nullptr);
-
-    //     CoreIR::ModuleDef* def = mod->newModuleDef();
-
-    //     RTLIL::Module* rmod = it.second;
-
-    //     foundGen = addGeneratedModule(rmod, modMap, c, g, def);
-
-    //     if (foundGen == true) {
-    //       break;
-    //     }
-    //   }
-    // }
 
     cout << "Modules after generating parametric modules" << endl;
     for (auto& it : design->modules_) {
@@ -1139,8 +1125,9 @@ struct ToCoreIRPass : public Yosys::Pass {
       cout << "# of instances in " << mod->getName() << " = " << instMap.size() << endl;
 
       buildSelectMap(rmod, instMap, c, def);
-      cout << "Setting definition for module = " << mod->getName() << endl;
 
+      removeRTLILTristate(def);
+      cout << "Setting definition for module = " << mod->getName() << endl;
       mod->setDef(def);
     }
 
@@ -1148,15 +1135,8 @@ struct ToCoreIRPass : public Yosys::Pass {
     for (auto& it : design->modules_) {
       string nm = id2cstr(it.first);
 
-      // if (nm.size() >= 8) {
-      //   cout << "Prefix = " << nm.substr(0, 8) << endl;
-      //   if (nm.substr(0, 8) == "$paramod") {
-      //     cout << "\tGenerated!!" << endl;
-      //   }
-      // }
       cout << "\t" << id2cstr(it.first) << endl;
     }
-    
 
     assert(modMap.size() > 0);
 
