@@ -737,19 +737,19 @@ buildSelectMap(RTLIL::Module* const rmod,
       if (cell->input(conn.first)) {
 
         if (cell->output(conn.first)) {
-          //cout << "Cell " << id2cstr(cell->name) << "." << id2cstr(conn.first) << " is an io port" << endl;
+          cout << "Cell " << id2cstr(cell->name) << "." << id2cstr(conn.first) << " is an io port" << endl;
 
           int i = 0;
           for (auto bit : sigmap(conn.second)) {
             assert(bit.wire != nullptr);
-            //cout << "bit.wire " << bit.offset << " = " << id2cstr(bit.wire->name) << endl;
+            cout << "bit.wire " << bit.offset << " = " << id2cstr(bit.wire->name) << endl;
             assert(bit.wire->port_input && bit.wire->port_output);
 
             Instance* port = inouts_to_casts[id2cstr(bit.wire->name)];
             assert(port != nullptr);
             Select* p = port->sel("INOUT_DRIVER_PORT")->sel(bit.offset);
 
-            //cout << "Connecting to " << p->toString() << endl;
+            cout << "Connecting to " << p->toString() << endl;
 
             // From driver to the current bit
             Select* to = instanceSelect(cell,
@@ -759,6 +759,8 @@ buildSelectMap(RTLIL::Module* const rmod,
             //cout << "to = " << to->toString() << endl;
             
             i++;
+
+            def->connect(to, p);
           }
         } else {
           // Not sure if I really need this index variable or if the index is
@@ -772,7 +774,7 @@ buildSelectMap(RTLIL::Module* const rmod,
 
               if (sigbit_to_driver_port_index.find(bit) ==
                   end(sigbit_to_driver_port_index)) {
-                cout << "Bit " << bit.offset << " for wire " << id2cstr(bit.wire->name) << " has no port?" << endl;
+                //cout << "Bit " << bit.offset << " for wire " << id2cstr(bit.wire->name) << " has no port?" << endl;
                 continue;
               }
 
@@ -873,16 +875,19 @@ buildSelectMap(RTLIL::Module* const rmod,
 
       int i = 0;
       for (auto bit : sigmap(wire)) {
-        //cout << "Bit wire = " << id2cstr(bit.wire->name) << ", offset = " << bit.offset << endl;
+        cout << "Bit wire = " << id2cstr(bit.wire->name) << ", offset = " << bit.offset << endl;
         assert(bit.wire != nullptr);
 
-        if (bit.wire->port_input && bit.wire->port_output) {
-          //cout << "Connecting 2 inout ports" << endl;
+        // // Possible solution: Check if the ports being connected are inouts?
+        // if (bit.wire->port_input && bit.wire->port_output) {
+        //   // This connection has already been wired up unless it is a connection
+        //   //continue;
 
-          // This connection has already been wired up unless it is a connection
-          continue;
-          //assert(false);
-        }
+        //   if (sigbit_to_driver_index.find(bit) == end(sigbit_to_driver_index)) {
+        //     cout << "Connecting 2 inout ports" << endl;
+        //     continue;
+        //   }
+        // }
 
         assert(sigbit_to_driver_port_index.find(bit) !=
                end(sigbit_to_driver_port_index));
@@ -890,7 +895,7 @@ buildSelectMap(RTLIL::Module* const rmod,
         Cell* driver = sigbit_to_driver_index[bit];
 
         assert(driver != nullptr);
-        //cout << "driver = " << id2cstr(driver->name) << endl;
+        cout << "driver = " << id2cstr(driver->name) << endl;
         string port = sigbit_to_driver_port_index[bit];
         //cout << "port = " << port << endl;
 
@@ -912,6 +917,12 @@ buildSelectMap(RTLIL::Module* const rmod,
         }
         
         assert(from != nullptr);
+
+        cout << "from = " <<  from->toString() << endl;
+        cout << "from->getDir() = " << from->getType()->getDir() << endl;
+        if (from->getType()->getDir() == CoreIR::Type::DK_InOut) {
+          continue;
+        }
 
         // Maybe move this outside the bit loop
         Select* to = cast->sel("IN_PORT"); //cast<Select>(def->sel("self")->sel(id2cstr(wire->name)));
