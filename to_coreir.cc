@@ -1060,7 +1060,82 @@ void removeRTLILTristate(CoreIR::ModuleDef* def) {
                        pt->sel("in")->sel("INOUT_DRIVER_PORT"));
           def->removeInstance(inst);
           inlineInstance(pt);
-          //assert(false);
+        } else {
+          // Check that INOUT_DRIVER_PORT has no connected wireables
+
+          // What is the correct behavior here? A: Find the mux that
+          // drives the input and convert it to a tristate buffer.
+          // Also: Connect the output to a tristate
+
+          auto inputSrcs = getSourceSelects(inst->sel("IN_PORT"));
+          Instance* srcMux;
+          for (auto sel : inputSrcs) {
+            cout << "\t" << sel->toString() << endl;
+            Wireable* src = extractSource(sel);
+
+            assert(isa<Instance>(src));
+
+            Instance* srcInst = cast<Instance>(src);
+            srcMux = srcInst;
+
+            cout << "Source instance = " << srcInst->toString() << endl;
+            cout << "Name            = " << getQualifiedOpName(*srcInst) << endl;
+            assert(getQualifiedOpName(*srcInst) == "rtlil.rtMux");
+
+            // Now: Disconnect the mux select, find the high impedance value,
+            // crash if the high impedance value does not exist. If it does
+            // then replace the mux with a triput
+
+            // Then replace OUT_PORT with a triget
+          }
+
+          cout << "Source mux is " << srcMux->toString() << endl;
+
+          Select* muxIn0 = srcMux->sel("A");
+          Select* muxIn1 = srcMux->sel("B");
+          Select* muxSel = srcMux->sel("S");
+
+          vector<Select*> muxIn0Srcs =
+            getSourceSelects(muxIn0);
+
+          // in0 must be a high impedance value, so that when sel == 0
+          // the tristate buffer is closed
+          cout << "in0 sources" << endl;
+          for (auto sel : muxIn0Srcs) {
+            cout << "\t" << sel->toString() << endl;
+
+            Wireable* src = extractSource(sel);
+            assert(isa<Instance>(src));
+
+            Instance* driver = cast<Instance>(src);
+            cout << "opname = " << getQualifiedOpName(*driver) << endl;
+            assert(getQualifiedOpName(*driver) == "rtlil.highImpedanceBit");
+          }
+
+          //Instance* muxPt = addPassthrough(srcMux, "_tristate_mux_PT");
+
+          // Create tristate buffer, attache the rtMux select and rtmux drivers
+          // to the tristate buffer
+          int muxWidth =
+            srcMux->getModuleRef()->getGenArgs().at("WIDTH")->get<int>();
+          Instance* tristate =
+            def->addInstance(srcMux->toString() + "_tristate",
+                             "coreir.triput",
+                             {{"width", CoreIR::Const::make(def->getContext(), muxWidth)}});
+
+          vector<Select*> selSrcs = getSourceSelects(muxSel);
+          assert(selSrcs.size() == 1);
+
+          def->connect(tristate->sel("en"), selSrcs[0]);
+
+          vector<Select*> inVals = getSignalValues(muxIn1);
+          assert(inVals.size() == (uint) muxWidth);
+
+          for (uint i = 0; i < inVals.size(); i++) {
+            def->connect(tristate->sel("in")->sel(i), inVals[i]);
+          }
+
+          assert(false);
         }
       }
     }
