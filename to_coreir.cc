@@ -1135,6 +1135,8 @@ void removeRTLILTristate(CoreIR::ModuleDef* def) {
             def->connect(tristate->sel("in")->sel(i), inVals[i]);
           }
 
+          def->connect(tristate->sel("out"), inst->sel("INOUT_DRIVER_PORT"));
+
           assert(false);
         }
       }
