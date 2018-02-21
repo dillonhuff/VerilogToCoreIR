@@ -1135,9 +1135,39 @@ void removeRTLILTristate(CoreIR::ModuleDef* def) {
             def->connect(tristate->sel("in")->sel(i), inVals[i]);
           }
 
-          def->connect(tristate->sel("out"), inst->sel("INOUT_DRIVER_PORT"));
+          // Note: Cannot wire up arrays of bitinout?
 
-          assert(false);
+          for (uint i = 0; i < inVals.size(); i++) {
+            def->connect(tristate->sel("out")->sel(i),
+                         inst->sel("INOUT_DRIVER_PORT")->sel(i));
+          }
+
+          // Create passthrough around inst, then rewire
+
+          Instance* pt = addPassthrough(inst, "_padIO_PT");
+          Instance* triget =
+            def->addInstance(pt->toString() + "_triget",
+                             "coreir.triget",
+                             {{"width",
+                                   CoreIR::Const::make(def->getContext(), muxWidth)}});
+
+          for (int i = 0; i < muxWidth; i++) {
+            def->connect(pt->sel("in")->sel("INOUT_PORT")->sel(i),
+                         triget->sel("in")->sel(i));
+          }
+
+          for (int i = 0; i < muxWidth; i++) {
+            def->connect(pt->sel("in")->sel("INOUT_PORT")->sel(i),
+                         pt->sel("in")->sel("INOUT_DRIVER_PORT")->sel(i));
+          }
+
+          def->connect(triget->sel("out"), pt->sel("in")->sel("OUT_PORT"));
+
+          def->removeInstance(inst);
+          inlineInstance(pt);
+
+          def->validate();
+
         }
       }
     }
