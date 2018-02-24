@@ -1172,6 +1172,7 @@ void removeRTLILTristate(CoreIR::ModuleDef* def) {
           cout << "Removing instance" << endl;
 
           def->removeInstance(inst);
+          def->removeInstance(srcMux);
           inlineInstance(pt);
 
           def->validate();
@@ -1259,6 +1260,8 @@ struct ToCoreIRPass : public Yosys::Pass {
 
     assert(modMap.size() > 0);
 
+    //c->runPasses({"deletedeadinstances"});
+
     CoreIR::Module* top = begin(modMap)->second;
 
     if (modMap.find("top") != end(modMap)) {
@@ -1273,7 +1276,7 @@ struct ToCoreIRPass : public Yosys::Pass {
       cout << "Could not save to json!!" << endl;
       c->die();
     }
-    
+
     deleteContext(c);
   }
 } ToCoreIRPass;

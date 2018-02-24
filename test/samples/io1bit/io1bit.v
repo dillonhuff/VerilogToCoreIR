@@ -1,17 +1,9 @@
 module io1bit_unq1 (
-clk, 
-//reset,
-pad,
-p2f,
-f2p,
+                    pad,
+                    p2f,
+                    f2p,
                     mode
-// config_addr,
-// config_data,
-// tile_id,
-);
-
-  /* verilator lint_off UNUSED */
-  input  clk;
+                    );
 
    inout pad;
    output p2f;
