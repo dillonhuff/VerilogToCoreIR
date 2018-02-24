@@ -1060,6 +1060,9 @@ void removeRTLILTristate(CoreIR::ModuleDef* def) {
                        pt->sel("in")->sel("INOUT_DRIVER_PORT"));
           def->removeInstance(inst);
           inlineInstance(pt);
+
+          removedPad = true;
+          break;
         } else {
           // Check that INOUT_DRIVER_PORT has no connected wireables
 
@@ -1116,11 +1119,13 @@ void removeRTLILTristate(CoreIR::ModuleDef* def) {
 
           // Create tristate buffer, attache the rtMux select and rtmux drivers
           // to the tristate buffer
+
+          cout << "Building tribuf" << endl;
           int muxWidth =
             srcMux->getModuleRef()->getGenArgs().at("WIDTH")->get<int>();
           Instance* tristate =
             def->addInstance(srcMux->toString() + "_tristate",
-                             "coreir.triput",
+                             "coreir.tribuf",
                              {{"width", CoreIR::Const::make(def->getContext(), muxWidth)}});
 
           vector<Select*> selSrcs = getSourceSelects(muxSel);
@@ -1144,10 +1149,11 @@ void removeRTLILTristate(CoreIR::ModuleDef* def) {
 
           // Create passthrough around inst, then rewire
 
+          cout << "Building triget" << endl;
           Instance* pt = addPassthrough(inst, "_padIO_PT");
           Instance* triget =
             def->addInstance(pt->toString() + "_triget",
-                             "coreir.triget",
+                             "coreir.ibuf",
                              {{"width",
                                    CoreIR::Const::make(def->getContext(), muxWidth)}});
 
@@ -1163,10 +1169,15 @@ void removeRTLILTristate(CoreIR::ModuleDef* def) {
 
           def->connect(triget->sel("out"), pt->sel("in")->sel("OUT_PORT"));
 
+          cout << "Removing instance" << endl;
+
           def->removeInstance(inst);
           inlineInstance(pt);
 
           def->validate();
+
+          removedPad = true;
+          break;
 
         }
       }
@@ -1215,10 +1226,11 @@ struct ToCoreIRPass : public Yosys::Pass {
 
       CoreIR::Module* mod = modMap[coreirSafeName(id2cstr(it.first))];
 
-      cout << "Parameters for " << mod->getName() << endl;
-      for (auto& param : (it.second)->avail_parameters) {
-        cout << "\t" << id2cstr(param) << endl;
-      }
+      cout << "Processing module " << mod->getName() << endl;
+      // cout << "Parameters for " << mod->getName() << endl;
+      // for (auto& param : (it.second)->avail_parameters) {
+      //   cout << "\t" << id2cstr(param) << endl;
+      // }
       SigMap assign_map(it.second);
       
       assert(mod != nullptr);
