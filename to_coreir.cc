@@ -71,6 +71,24 @@ int getIntParam(Cell* const cell, const std::string& str) {
   return param->second.as_int();
 }
 
+BitVec getBitVecParam(Cell* const cell, const std::string& str) {
+  auto param = cell->parameters.find(str);
+
+  if (param == std::end(cell->parameters)) {
+    cout << "Cannot find parameter " << str << " in " << endl;
+    print_cell_info(cell);
+    assert(false);
+  }
+
+  BitVec bv(param->second.bits.size(), 0);
+  for (int i = 0; i < ((int) bv.bitLength()); i++) {
+    bv.set(i, param->second.bits[i]);
+  }
+
+  return bv;
+  //return param->second.as_int();
+}
+
 std::string coreirSafeName(const std::string cellName) {
   string instName = "";
   for (uint i = 0; i < cellName.size(); i++) {
@@ -430,13 +448,14 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
       int width = getIntParam(cell, "\\WIDTH");
       int polarity = getIntParam(cell, "\\CLK_POLARITY");
       int rstPolarity = getIntParam(cell, "\\ARST_POLARITY");
-      int rstValue = getIntParam(cell, "\\ARST_VALUE");
+      //int rstValue = getIntParam(cell, "\\ARST_VALUE");
+      BitVec rstValue = getBitVecParam(cell, "\\ARST_VALUE");
 
       auto inst = def->addInstance(instName, "rtlil.adff",
                                    {{"WIDTH", CoreIR::Const::make(c, width)},
                                        {"CLK_POLARITY", CoreIR::Const::make(c, (bool) polarity)},
-                                         {"ARST_POLARITY", CoreIR::Const::make(c, (bool) rstPolarity)},
-                                           {"ARST_VALUE", CoreIR::Const::make(c, rstValue)}});
+                                         {"ARST_POLARITY", CoreIR::Const::make(c, (bool) rstPolarity)}},
+                                   {{"init", CoreIR::Const::make(c, rstValue)}});
 
       instMap[cell] = inst;
 
@@ -737,19 +756,19 @@ buildSelectMap(RTLIL::Module* const rmod,
       if (cell->input(conn.first)) {
 
         if (cell->output(conn.first)) {
-          cout << "Cell " << id2cstr(cell->name) << "." << id2cstr(conn.first) << " is an io port" << endl;
+          //cout << "Cell " << id2cstr(cell->name) << "." << id2cstr(conn.first) << " is an io port" << endl;
 
           int i = 0;
           for (auto bit : sigmap(conn.second)) {
             assert(bit.wire != nullptr);
-            cout << "bit.wire " << bit.offset << " = " << id2cstr(bit.wire->name) << endl;
+            //cout << "bit.wire " << bit.offset << " = " << id2cstr(bit.wire->name) << endl;
             assert(bit.wire->port_input && bit.wire->port_output);
 
             Instance* port = inouts_to_casts[id2cstr(bit.wire->name)];
             assert(port != nullptr);
             Select* p = port->sel("INOUT_DRIVER_PORT")->sel(bit.offset);
 
-            cout << "Connecting to " << p->toString() << endl;
+            //cout << "Connecting to " << p->toString() << endl;
 
             // From driver to the current bit
             Select* to = instanceSelect(cell,
@@ -971,7 +990,7 @@ buildSelectMap(RTLIL::Module* const rmod,
         
             Cell* driver = sigbit_to_driver_index[bit];
             string port = sigbit_to_driver_port_index[bit];
-            cout << "port = " << port << endl;
+            //cout << "port = " << port << endl;
             int offset = sigbit_to_driver_offset[bit];
 
             Select* from = nullptr;
@@ -997,7 +1016,7 @@ buildSelectMap(RTLIL::Module* const rmod,
               to = to->sel(i);
             }
 
-            cout << "Connecting " << from->toString() << " to " << to->toString() << " : " << to->getType()->toString() << endl;
+            //cout << "Connecting " << from->toString() << " to " << to->toString() << " : " << to->getType()->toString() << endl;
 
             def->connect(from, to);
           } else {
