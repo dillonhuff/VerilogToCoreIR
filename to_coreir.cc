@@ -108,6 +108,8 @@ std::string coreirSafeName(const std::string cellName) {
       instName += "__RIGHT_BRACKET__";
     } else if (cellName[i] == '/') {
       instName += "__FORWARD_SLASH__";
+    } else if (cellName[i] == '\'') {
+      instName += "__TICK__";
     } else {
       instName += cellName[i];
     }
