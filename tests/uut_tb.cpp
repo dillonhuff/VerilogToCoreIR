@@ -1,6 +1,8 @@
 #include "Vuut.h"
 #include "verilated.h"
 
+#include "tb_utils.h"
+
 #include <iostream>
 
 using namespace std;
@@ -16,7 +18,8 @@ int main() {
   assert(top.out1 == (100 + 3 + 7));
   assert(top.out2 == (100 - 3));
 
-  cout << "#####################################" << endl;
-  cout << "##### uut tests passed" << endl;
-  cout << "#####################################" << endl;
+  printPassed("uut");
+  // cout << "#####################################" << endl;
+  // cout << "##### uut tests passed" << endl;
+  // cout << "#####################################" << endl;
 }

@@ -16,7 +16,7 @@ def run_verilator_tb(top_module_name, verilog_files, cpp_test_file):
     verilate = os.system(v_command);
 
     if (verilate != 0):
-        print 'ERROR: ' + mod_name + ' verilation failure',
+        print 'ERROR: {0} verilation failure'.format(top_module_name),
         assert(False)
 
     m_command = "make -C obj_dir -j -f V{0}.mk V{0}".format(top_module_name)
@@ -36,3 +36,7 @@ def run_verilator_tb(top_module_name, verilog_files, cpp_test_file):
 yosys_to_coreir("./test/samples/first_test/test.v")
 coreir_to_verilog("./uut")
 run_verilator_tb("uut", "uut.v", "./tests/uut_tb.cpp")
+
+yosys_to_coreir("./test/samples/fan_out_2/fan_out_2.v")
+coreir_to_verilog("./fan_out_2")
+run_verilator_tb("fan_out_2", "fan_out_2.v", "./tests/fan_out_2_tb.cpp")
