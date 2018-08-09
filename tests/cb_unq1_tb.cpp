@@ -5,31 +5,50 @@
 
 int main() {
   Vcb_unq1 top;
-
+  top.config_en = 0;
+  
   POSEDGE(top, reset);
   NEGEDGE(top, reset);
-  POSEDGE(top, reset);
 
   assert(top.out == 0);
-  // top.a = 3;
 
-  // cout << "top.yout = " << (int) top.yout << endl;
+  top.config_addr = 0;
+  top.config_en = 1;
+  top.config_data = 4;
 
-  // POSEDGE(top, clk);
+  POSEDGE(top, clk);
 
-  // cout << "top.yout = " << (int) top.yout << endl;
+  top.config_en = 0;
 
-  // assert(top.yout == 3);
+  top.in_4 = 185;
 
-  // top.a = 1;
+  POSEDGE(top, clk);
 
-  // NEGEDGE(top, clk);
-
-  // assert(top.yout == 3);
+  cout << "top out after programming = " << (int) top.out << endl;
   
-  // POSEDGE(top, clk);
+  assert(top.out == top.in_4);
 
-  // assert(top.yout == 1);
+  top.config_addr = 0;
+  top.config_en = 1;
+  top.config_data = 8;
+
+  POSEDGE(top, clk);
+
+  top.config_en = 0;
+
+  top.in_8 = 19;
+
+  POSEDGE(top, clk);
+
+  cout << "top out after programming = " << (int) top.out << endl;
+  
+  assert(top.out == top.in_8);
+
+  top.in_8 = 7;
+
+  NEGEDGE(top, clk);
+
+  assert(top.out == top.in_8);
   
   printPassed("cb_unq1");
 }
