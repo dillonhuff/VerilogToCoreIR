@@ -19,7 +19,4 @@ int main() {
   assert(top.out2 == (100 - 3));
 
   printPassed("uut");
-  // cout << "#####################################" << endl;
-  // cout << "##### uut tests passed" << endl;
-  // cout << "#####################################" << endl;
 }

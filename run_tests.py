@@ -40,3 +40,7 @@ run_verilator_tb("uut", "uut.v", "./tests/uut_tb.cpp")
 yosys_to_coreir("./test/samples/fan_out_2/fan_out_2.v")
 coreir_to_verilog("./fan_out_2")
 run_verilator_tb("fan_out_2", "fan_out_2.v", "./tests/fan_out_2_tb.cpp")
+
+yosys_to_coreir("./test/samples/register_assign/register_assign.v")
+coreir_to_verilog("./register_assign")
+run_verilator_tb("register_assign", "register_assign.v", "./tests/register_assign_tb.cpp")
