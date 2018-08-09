@@ -1,6 +1,7 @@
 COREIR_HOME = /Users/dillon/CppWorkspace/coreir
 
 test: to_coreir.so
+	python run_tests.py
 	yosys -p "hierarchy; proc; memory -nomap; pmuxtree; to_coreir" -m ./to_coreir.so ./test/samples/io1bit/io1bit.v
 	yosys -p "proc; memory; pmuxtree; to_coreir" -m ./to_coreir.so ./test/samples/inout_inst/inout_inst.v
 	yosys -p "proc; memory; pmuxtree; to_coreir" -m ./to_coreir.so ./test/samples/cb_unq1/cb_unq1.v
