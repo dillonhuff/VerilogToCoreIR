@@ -11,3 +11,4 @@ to_coreir.so.dSYM/
 stubnets.so.dSYM/
 *.json
 a.out
+uut.v

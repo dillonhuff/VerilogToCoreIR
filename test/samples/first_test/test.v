@@ -4,6 +4,7 @@ module uut(in1, in2, in3, out1, out2);
    output [8:0] out1, out2;
 
    assign out1 = in1 + in2 + in3;
+   assign out2 = in1 - in2;
    
 
 endmodule
