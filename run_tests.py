@@ -12,7 +12,7 @@ def coreir_to_verilog(file_name):
     run_cmd("coreir -i {0}.json -o {0}.v --load_libs rtlil".format(file_name))
 
 def run_verilator_tb(top_module_name, verilog_files, cpp_test_file):
-    v_command = "verilator -Wall -Wno-DECLFILENAME --cc {0} --exe {2} --top-module {1} -CFLAGS -std=c++14 -CFLAGS -march=native".format(verilog_files, top_module_name, cpp_test_file)
+    v_command = "verilator -Wno-DECLFILENAME --cc {0} --exe {2} --top-module {1} -CFLAGS -std=c++14 -CFLAGS -march=native".format(verilog_files, top_module_name, cpp_test_file)
     verilate = os.system(v_command);
 
     if (verilate != 0):
@@ -44,3 +44,7 @@ run_verilator_tb("fan_out_2", "fan_out_2.v", "./tests/fan_out_2_tb.cpp")
 yosys_to_coreir("./test/samples/register_assign/register_assign.v")
 coreir_to_verilog("./register_assign")
 run_verilator_tb("register_assign", "register_assign.v", "./tests/register_assign_tb.cpp")
+
+yosys_to_coreir("./test/samples/cb_unq1/cb_unq1.v")
+coreir_to_verilog("./cb_unq1")
+run_verilator_tb("cb_unq1", "cb_unq1.v", "./tests/cb_unq1_tb.cpp")
