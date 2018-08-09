@@ -12,3 +12,4 @@ stubnets.so.dSYM/
 *.json
 a.out
 uut.v
+obj_dir/
