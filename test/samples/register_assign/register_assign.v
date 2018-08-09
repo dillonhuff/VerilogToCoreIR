@@ -7,7 +7,8 @@ module register_assign(input clk, input [1:0] a, output [1:0] yout);
      y <= a;
    end
 
-   assign yout = y;
+   wire [1:0] y_tmp;
    
+   assign yout = y;
 
 endmodule

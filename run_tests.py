@@ -6,7 +6,7 @@ def run_cmd(cmd):
 
 
 def yosys_to_coreir(file_name):
-    run_cmd("yosys -p \"to_coreir\" -ql yosys_to_coreir.log -m ./to_coreir.so {0}".format(file_name))
+    run_cmd("yosys -p \"proc; memory -nomap; pmuxtree; to_coreir\" -ql yosys_to_coreir.log -m ./to_coreir.so {0}".format(file_name))
 
 def coreir_to_verilog(file_name):
     run_cmd("coreir -i {0}.json -o {0}.v --load_libs rtlil".format(file_name))
