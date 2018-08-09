@@ -5,12 +5,25 @@
 
 int main() {
   Vregister_assign top;
-  top.in1 = 1;
+  top.a = 3;
 
-  top.eval();
+  cout << "top.yout = " << (int) top.yout << endl;
 
-  assert(top.out1 == !top.in1);
-  assert(top.out2 == !top.in1);
+  POSEDGE(top, clk);
 
+  cout << "top.yout = " << (int) top.yout << endl;
+
+  assert(top.yout == 3);
+
+  top.a = 1;
+
+  NEGEDGE(top, clk);
+
+  assert(top.yout == 3);
+  
+  POSEDGE(top, clk);
+
+  assert(top.yout == 1);
+  
   printPassed("register_assign");
 }
