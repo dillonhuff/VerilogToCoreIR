@@ -368,7 +368,6 @@ map<Cell*, Instance*> buildInstanceMap(RTLIL::Module* const rmod,
                                              {"Y_WIDTH", CoreIR::Const::make(c, widthY)}});
 
       instMap[cell] = inst;
-      
     } else if (cellTp == "$mux") {
       string opName = cellTp.substr(1, cellTp.size());
       //cout << "opName = " << opName << endl;
