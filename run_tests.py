@@ -24,15 +24,15 @@ def run_verilator_tb(top_module_name, verilog_files, cpp_test_file):
     make_cmd = os.system(m_command)
 
     if (make_cmd != 0):
-        print 'ERROR: ' + mod_name + ' could not make verilated code',
+        print 'ERROR: {0} could not make verilated code'.format(top_module_name)
         assert(False)
 
     run_cmd = os.system('./obj_dir/V{0}'.format(top_module_name))
 
     if (run_cmd != 0):
-        print 'ERROR: ' + mod_name + ' tests failed'
+        print 'ERROR: {0} tests failed'.format(top_module_name)
         assert(False)
     
 yosys_to_coreir("./test/samples/first_test/test.v")
 coreir_to_verilog("./uut")
-run_verilator_tb("uut", "uut.v", "uut_tb.cpp")
+run_verilator_tb("uut", "uut.v", "./tests/uut_tb.cpp")
