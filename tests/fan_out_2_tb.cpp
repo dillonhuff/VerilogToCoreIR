@@ -5,7 +5,7 @@
 
 int main() {
   Vfan_out_2 top;
-  top.in1 = 0;
+  top.in1 = 1;
 
   top.eval();
 
