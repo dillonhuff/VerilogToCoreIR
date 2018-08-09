@@ -13,3 +13,6 @@ stubnets.so.dSYM/
 a.out
 uut.v
 obj_dir/
+cb_unq1.v
+fan_out_2.v
+register_assign.v
