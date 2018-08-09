@@ -11,6 +11,28 @@ def yosys_to_coreir(file_name):
 def coreir_to_verilog(file_name):
     run_cmd("coreir -i {0}.json -o {0}.v --load_libs rtlil".format(file_name))
 
+def run_verilator_tb(top_module_name, verilog_files, cpp_test_file):
+    v_command = "verilator -Wall -Wno-DECLFILENAME --cc {0} --exe {2} --top-module {1} -CFLAGS -std=c++14 -CFLAGS -march=native".format(verilog_files, top_module_name, cpp_test_file)
+    verilate = os.system(v_command);
+
+    if (verilate != 0):
+        print 'ERROR: ' + mod_name + ' verilation failure',
+        assert(False)
+
+    m_command = "make -C obj_dir -j -f V{0}.mk V{0}".format(top_module_name)
+
+    make_cmd = os.system(m_command)
+
+    if (make_cmd != 0):
+        print 'ERROR: ' + mod_name + ' could not make verilated code',
+        assert(False)
+
+    run_cmd = os.system('./obj_dir/V{0}'.format(top_module_name))
+
+    if (run_cmd != 0):
+        print 'ERROR: ' + mod_name + ' tests failed'
+        assert(False)
+    
 yosys_to_coreir("./test/samples/first_test/test.v")
 coreir_to_verilog("./uut")
-run_verilator_tb("uut", "uut.v")
+run_verilator_tb("uut", "uut.v", "uut_tb.cpp")
