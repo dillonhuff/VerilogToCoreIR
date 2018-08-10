@@ -1264,6 +1264,54 @@ struct ToCoreIRPass : public Yosys::Pass {
 
       cout << "# of instances in " << mod->getName() << " = " << instMap.size() << endl;
 
+      map<string, map<string, vector<string> > > instancePortConnectionWires;
+      for (auto im : instMap) {
+        map<string, vector<string> > portConnectionWires;
+
+        Cell* cl = im.first;
+        Instance* inst = im.second;
+
+        //cout << "\tInstance = " << inst->toString() << endl;
+
+        for (auto conn : cl->connections_) {
+
+          vector<string> inputs;
+
+          // cout << "\t\t" << id2cstr(conn.first) << " connects to " << endl;
+          // cout << "\t\tSigSpec width = " << conn.second.size() << endl;
+
+          int offset = 0;
+          for (int i = 0; i < (int) conn.second.chunks().size(); i++) {
+            SigChunk sc = conn.second.chunks().at(i);
+
+            // cout << "\t\t\toffset = " << sc.offset << endl;
+            // cout << "\t\t\twidth  = " << sc.width << endl;
+            if (sc.wire != nullptr) {
+              //cout << "\t\t\t" << i << " --> " << id2cstr(sc.wire->name) << endl;
+              for (int j = 0; j < (int) sc.width; j++) {
+                inputs.push_back(id2cstr(sc.wire->name));
+              }
+
+            } else {
+              for (int j = 0; j < (int) sc.width; j++) {
+                inputs.push_back("CONST_WIRE");
+              }
+
+              //cout << "\t\t\tWIRE " << i << " is null" << endl;
+            }
+
+            offset += sc.width;
+          }
+
+          assert((int) inputs.size() == (int) conn.second.size());
+
+          portConnectionWires.insert({id2cstr(conn.first), inputs});
+
+        }
+
+        instancePortConnectionWires.insert({inst->toString(), portConnectionWires});
+      }
+
       buildSelectMap(rmod, instMap, c, def);
 
       removeRTLILTristate(def);
