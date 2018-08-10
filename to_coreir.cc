@@ -1329,7 +1329,7 @@ struct ToCoreIRPass : public Yosys::Pass {
 
     assert(modMap.size() > 0);
 
-    //c->runPasses({"deletedeadinstances"});
+    c->runPasses({"packconnections"});
 
     CoreIR::Module* top = begin(modMap)->second;
 
