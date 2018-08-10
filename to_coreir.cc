@@ -1317,6 +1317,7 @@ struct ToCoreIRPass : public Yosys::Pass {
       removeRTLILTristate(def);
       cout << "Setting definition for module = " << mod->getName() << endl;
       mod->setDef(def);
+      mod->setMetaData(instancePortConnectionWires);
     }
 
     cout << "Modules after running instance maps" << endl;
